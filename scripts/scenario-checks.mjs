@@ -41,6 +41,8 @@ export const checks = {
   // 학생이 이미 원한다고 말했는데 "~해 줄까?"로 다시 물음
   noRedundantAsk: () => (r) =>
     /(이야기|얘기|썰)[^.?!]*(해 ?줄까|들려 ?줄까)\??/.test(r.message) ? '이미 요청했는데 바로 하지 않고 다시 물음' : null,
+  // 프롬프트에 넣은 예시 이야기를 그대로 베낌
+  noExampleCopy: () => (r) => (/거울 속|고무장갑/.test(r.message) ? '프롬프트 예시 이야기를 그대로 사용' : null),
   acceptsCorrection: () => (r) =>
     /(잘못|그랬구나|그렇구나|싶었구나|웃|알겠|좋아)/.test(r.message) && !MIND_READING.test(r.message)
       ? null
@@ -71,9 +73,9 @@ export const SCENARIOS = [
     title: '기분 전환 요청 (요청에 응하기, 캐릭터 질문)',
     turns: [
       ['기분이 좀 별로야', []],
-      ['재밌는 이야기 해줘', [checks.complies()]],
+      ['재밌는 이야기 해줘', [checks.complies(), checks.noRedundantAsk(), checks.noExampleCopy()]],
       ['너는 친구 있어?', [checks.complies()]],
-      ['재밌는 이야기 또 해줘', [checks.complies()]],
+      ['재밌는 이야기 또 해줘', [checks.complies(), checks.noRedundantAsk(), checks.noExampleCopy()]],
     ],
   },
   {
@@ -81,7 +83,7 @@ export const SCENARIOS = [
     title: '해석 정정 (단정하지 않기, 정정 받아들이기)',
     turns: [
       ['심심해', [checks.noMindReading()]],
-      ['아니 위로 말고 그냥 웃고 싶어', [checks.acceptsCorrection(), checks.complies(), checks.noRedundantAsk()]],
+      ['아니 위로 말고 그냥 웃고 싶어', [checks.acceptsCorrection(), checks.complies(), checks.noRedundantAsk(), checks.noExampleCopy()]],
     ],
   },
   {

@@ -67,3 +67,11 @@ test('each character has a calm crisis message with 1388 and 109 in 반말', () 
     assert.equal(getLocalFallbackResponse(id, '죽고 싶어', 'crisis').message, msg);
   }
 });
+
+test('prompt tells the model to tell the story right away instead of offering it', () => {
+  const prompt = buildSystemPrompt('dog');
+  assert.ok(prompt.includes('[바로 응하기]'));
+  // 다시 묻게 만들던 예시는 남아 있지 않아야 함
+  assert.ok(!prompt.includes('웃긴 얘기 해 줄까, 아니면 그냥 들어 줄까?'));
+  assert.ok(!prompt.includes('(예: "내가 잘못 이해했네, 웃고 싶었구나!")'));
+});
