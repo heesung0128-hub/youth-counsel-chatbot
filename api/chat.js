@@ -54709,11 +54709,14 @@ async function processChat(rawBody, clientIp = "unknown") {
         parsedData.suggestedKeywords[2] || "\uB098 \uC694\uC998 \uD798\uB4E4\uC5B4"
       ];
     }
-    const finalRiskLevel = maxRisk(parsedData.riskLevel, heuristicCheck.riskLevel);
+    const finalRiskLevel = maxRisk(
+      maxRisk(parsedData.riskLevel, heuristicCheck.riskLevel),
+      conversationRisk.riskLevel
+    );
     const { safetyCheck, shouldOfferReferral } = resolveSafetyCheck({
       finalRiskLevel,
       heuristicRiskLevel: heuristicCheck.riskLevel,
-      modelSafetyCheck: parsedData.safetyCheck,
+      modelSafetyCheck: parsedData.safetyCheck === true || conversationRisk.needsSafetyCheck,
       modelOfferReferral: parsedData.shouldOfferReferral
     });
     return {

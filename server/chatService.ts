@@ -190,14 +190,19 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
       ];
     }
 
-    // 모델이 더 낮게 판단해도 규칙 기반 판정(concern/crisis)보다 낮아지지 않게 함
-    const finalRiskLevel = maxRisk(parsedData.riskLevel, heuristicCheck.riskLevel);
+    // 모델이 더 낮게 판단해도 규칙 기반 판정(현재 메시지·최근 대화 흐름)보다 낮아지지 않게 함
+    // 예: 확인 질문 뒤 간접 신호가 다시 나오면 모델이 또 질문하더라도 위기로 안내
+    const finalRiskLevel = maxRisk(
+      maxRisk(parsedData.riskLevel, heuristicCheck.riskLevel),
+      conversationRisk.riskLevel
+    );
 
     // 위기 키워드가 있으면 확인 질문 없이 즉시 안내, 간접 신호면 확인 질문 턴으로 처리
+    // (모델이 확인 질문을 하고도 safetyCheck를 빠뜨리는 경우가 있어 규칙 판단으로 보완)
     const { safetyCheck, shouldOfferReferral } = resolveSafetyCheck({
       finalRiskLevel,
       heuristicRiskLevel: heuristicCheck.riskLevel,
-      modelSafetyCheck: parsedData.safetyCheck,
+      modelSafetyCheck: parsedData.safetyCheck === true || conversationRisk.needsSafetyCheck,
       modelOfferReferral: parsedData.shouldOfferReferral,
     });
 
