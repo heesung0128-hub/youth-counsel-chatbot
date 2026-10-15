@@ -23,3 +23,13 @@ test('evaluateCrisisSignals returns safe for everyday conversation', () => {
   assert.equal(result.shouldPinEmergencyCard, false);
   assert.equal(result.matchedKeywords.length, 0);
 });
+
+test('evaluateCrisisSignals ignores spacing variations', () => {
+  assert.equal(evaluateCrisisSignals('죽 고 싶 어').riskLevel, 'crisis');
+  assert.equal(evaluateCrisisSignals('그냥 없어지고싶다').riskLevel, 'crisis');
+  assert.equal(evaluateCrisisSignals('살고 싶지 않아').riskLevel, 'crisis');
+});
+
+test('evaluateCrisisSignals handles non-string input', () => {
+  assert.equal(evaluateCrisisSignals(undefined as unknown as string).riskLevel, 'safe');
+});

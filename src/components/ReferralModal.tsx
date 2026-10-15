@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { X, ShieldCheck, HeartHandshake, Phone, Clock, MapPin, Check, AlertCircle, Sparkles } from 'lucide-react';
 import { REFERRAL_CONFIG } from '../config/referralConfig';
 import { ReferralOrg } from '../types';
+import { displayValue, isPlaceholder } from '../utils/referralDisplay';
+
+// 2단계 익명 상담 창구가 실제 운영 중일 때만 연결 동의/요청 버튼을 노출
+const isStage2Active = REFERRAL_CONFIG.stage2.status === 'active';
 
 interface ReferralModalProps {
   isOpen: boolean;
@@ -98,17 +102,19 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-[#F6FAFD] border border-[#E1EFF8] space-y-2">
-                <h4 className="text-xs font-bold text-[#1E3A4B] flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-[#5BB7E6]" />
-                  안내 및 개인정보 처리 원칙
-                </h4>
-                <ul className="text-xs text-[#527081] space-y-1 list-disc list-inside">
-                  <li>학생의 이름, 연락처, 학번을 요구하지 않는 <strong>익명 채팅</strong>으로 진행됩니다.</li>
-                  <li>상담사는 청소년 전문 상담 자격을 갖춘 선생님이 배정됩니다.</li>
-                  <li>대화 중 언제든 학생이 원할 때 상담을 종료할 수 있습니다.</li>
-                </ul>
-              </div>
+              {isStage2Active && (
+                <div className="p-3.5 rounded-2xl bg-[#F6FAFD] border border-[#E1EFF8] space-y-2">
+                  <h4 className="text-xs font-bold text-[#1E3A4B] flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-[#5BB7E6]" />
+                    안내 및 개인정보 처리 원칙
+                  </h4>
+                  <ul className="text-xs text-[#527081] space-y-1 list-disc list-inside">
+                    <li>학생의 이름, 연락처, 학번을 요구하지 않는 <strong>익명 채팅</strong>으로 진행됩니다.</li>
+                    <li>상담사는 청소년 전문 상담 자격을 갖춘 선생님이 배정됩니다.</li>
+                    <li>대화 중 언제든 학생이 원할 때 상담을 종료할 수 있습니다.</li>
+                  </ul>
+                </div>
+              )}
 
               {/* Status Notice */}
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-[#527081]">
@@ -118,7 +124,29 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({
                 {REFERRAL_CONFIG.stage2.anonymousChannelNotice}
               </div>
 
-              {connectionRequested ? (
+              {!isStage2Active ? (
+                /* 운영 전: 가짜 "연결 요청 완료" 대신 지금 바로 이용 가능한 익명 상담 안내 */
+                <div className="p-4 rounded-2xl bg-[#EAF5FC] border border-[#D5ECF8] space-y-2.5">
+                  <h4 className="text-sm font-bold text-[#1E3A4B]">
+                    지금 바로 익명으로 상담받고 싶다면
+                  </h4>
+                  <p className="text-xs text-[#527081] leading-relaxed">
+                    이 창구는 아직 열리지 않았어요. 대신 <strong>청소년상담 1388</strong>에서 이름을 밝히지 않고
+                    24시간 전문 상담 선생님과 이야기할 수 있어요.
+                  </p>
+                  <ul className="text-xs text-[#384E5B] space-y-1">
+                    <li>📞 전화: 1388</li>
+                    <li>💬 문자: #1388</li>
+                    <li>🟡 카카오톡: 채널 [청소년상담1388] 검색</li>
+                  </ul>
+                  <a
+                    href="tel:1388"
+                    className="block w-full py-2.5 px-4 rounded-xl font-bold text-xs text-center text-white bg-[#5BB7E6] hover:bg-[#48A8D8] shadow-xs transition"
+                  >
+                    1388에 전화하기
+                  </a>
+                </div>
+              ) : connectionRequested ? (
                 <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-center animate-in fade-in">
                   <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-2">
                     <Check className="w-5 h-5" />
@@ -185,20 +213,29 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({
 
                     <p className="text-xs text-[#527081]">{org.description}</p>
 
-                    <div className="pt-2 border-t border-slate-100 grid grid-cols-1 gap-1 text-[11px] text-[#5A7888]">
-                      <div className="flex items-center gap-1.5">
-                        <Phone className="w-3 h-3 text-[#5BB7E6]" />
-                        <span>연락처: {org.contact}</span>
+                    {/* 대괄호 자리표시자 값은 숨김 (referralConfig.ts에서 확정 시 표시) */}
+                    {(displayValue(org.contact) || displayValue(org.hours) || displayValue(org.location)) && (
+                      <div className="pt-2 border-t border-slate-100 grid grid-cols-1 gap-1 text-[11px] text-[#5A7888]">
+                        {displayValue(org.contact) && (
+                          <div className="flex items-center gap-1.5">
+                            <Phone className="w-3 h-3 text-[#5BB7E6]" />
+                            <span>연락처: {displayValue(org.contact)}</span>
+                          </div>
+                        )}
+                        {displayValue(org.hours) && (
+                          <div className="flex items-center gap-1.5">
+                            <Clock className="w-3 h-3 text-[#5BB7E6]" />
+                            <span>운영시간: {displayValue(org.hours)}</span>
+                          </div>
+                        )}
+                        {displayValue(org.location) && (
+                          <div className="flex items-center gap-1.5">
+                            <MapPin className="w-3 h-3 text-[#5BB7E6]" />
+                            <span>위치: {displayValue(org.location)}</span>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="w-3 h-3 text-[#5BB7E6]" />
-                        <span>운영시간: {org.hours}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="w-3 h-3 text-[#5BB7E6]" />
-                        <span>위치: {org.location}</span>
-                      </div>
-                    </div>
+                    )}
 
                     {org.isCustomizableNotice && (
                       <div className="text-[10px] text-[#7896A6] bg-slate-50 p-1.5 rounded-lg">
@@ -209,9 +246,14 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({
                 ))}
               </div>
 
-              <div className="p-3 rounded-xl bg-[#FFF9E6] border border-[#FFE7A3] text-xs text-[#7B6018]">
-                ※ 위 연락처 및 운영 정보는 시범 운영 단계에서 교내 Wee클래스 및 유관기관 협의 후 확정됩니다.
-              </div>
+              {REFERRAL_CONFIG.stage3.organizations.some(
+                (org) => isPlaceholder(org.contact) || isPlaceholder(org.hours) || isPlaceholder(org.location)
+              ) && (
+                <div className="p-3 rounded-xl bg-[#FFF9E6] border border-[#FFE7A3] text-xs text-[#7B6018]">
+                  ※ 일부 기관의 연락처·운영시간은 협의 후 추가될 예정이에요. 지금 도움이 필요하면 담임 선생님이나
+                  Wee클래스 선생님께 직접 말하거나, 청소년상담 1388(24시간)에 연락해 주세요.
+                </div>
+              )}
             </div>
           )}
         </div>

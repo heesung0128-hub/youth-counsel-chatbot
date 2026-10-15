@@ -86,6 +86,12 @@ export const CRISIS_KEYWORDS = [
   '유서',
   '목숨',
   '뛰어내리',
+  '죽어버리',
+  '죽을래',
+  '죽을까',
+  '없어지고 싶',
+  '살고 싶지 않',
+  '극단적 선택',
 ];
 
 export const CONCERN_KEYWORDS = [

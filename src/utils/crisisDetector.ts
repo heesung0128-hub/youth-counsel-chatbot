@@ -1,42 +1,7 @@
 
-export const CRISIS_KEYWORDS = [
-  '죽고싶',
-  '죽고 싶',
-  '자살',
-  '자해',
-  '손목',
-  '살기싫',
-  '살기 싫',
-  '사라지고 싶',
-  '사라지고싶',
-  '끝내고 싶',
-  '끝내고싶',
-  '때렸',
-  '맞았',
-  '학대',
-  '폭행',
-  '가정폭력',
-  '성폭력',
-  '괴롭힘',
-  '유서',
-  '목숨',
-  '뛰어내리',
-];
+import { CRISIS_KEYWORDS, CONCERN_KEYWORDS } from '../config/crisisConfig.ts';
 
-export const CONCERN_KEYWORDS = [
-  '우울해',
-  '불안해',
-  '너무 힘들어',
-  '숨이 안 쉬어',
-  '공황',
-  '패닉',
-  '가슴이 답답',
-  '눈물이 멈추지',
-  '아무것도 못하겠',
-  '외로워',
-  '왕따',
-  '은따',
-];
+export { CRISIS_KEYWORDS, CONCERN_KEYWORDS };
 
 export interface CrisisEvaluationResult {
   riskLevel: 'safe' | 'concern' | 'crisis';
@@ -59,12 +24,15 @@ export function evaluateCrisisSignals(text: string): CrisisEvaluationResult {
     };
   }
 
-  const normalized = text.toLowerCase().replace(/\s+/g, ' ');
+  // 띄어쓰기 변형("죽고 싶" / "죽고싶")을 모두 잡기 위해 공백을 제거한 텍스트로 비교
+  const normalized = text.toLowerCase().replace(/\s+/g, '');
+  const matches = (keyword: string) =>
+    normalized.includes(keyword.toLowerCase().replace(/\s+/g, ''));
 
   // 1. Check High-Risk Crisis Keywords
   const matchedCrisis: string[] = [];
   for (const keyword of CRISIS_KEYWORDS) {
-    if (normalized.includes(keyword.toLowerCase())) {
+    if (matches(keyword)) {
       matchedCrisis.push(keyword);
     }
   }
@@ -82,7 +50,7 @@ export function evaluateCrisisSignals(text: string): CrisisEvaluationResult {
   // 2. Check Moderate Concern Keywords
   const matchedConcern: string[] = [];
   for (const keyword of CONCERN_KEYWORDS) {
-    if (normalized.includes(keyword.toLowerCase())) {
+    if (matches(keyword)) {
       matchedConcern.push(keyword);
     }
   }

@@ -229,7 +229,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="px-2 py-0.5 rounded-full bg-[#FFF8E1] text-[#F57F17] font-bold text-[10px]">
-                      2단계
+                      2단계{REFERRAL_CONFIG.stage2.status !== 'active' && ' · 준비 중'}
                     </span>
                     <span className="text-[11px] text-[#7E5700] underline font-medium group-hover:text-[#F57F17] flex items-center gap-0.5">
                       자세히 보기 <ExternalLink className="w-3 h-3" />
@@ -240,7 +240,9 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                     {REFERRAL_CONFIG.stage2.description}
                   </p>
                   <div className="mt-2 text-[10px] bg-[#FFF9E6] p-1.5 rounded-lg text-[#8D6E18] font-medium">
-                    {REFERRAL_CONFIG.stage2.consentMessage}
+                    {REFERRAL_CONFIG.stage2.status === 'active'
+                      ? REFERRAL_CONFIG.stage2.consentMessage
+                      : '아직 운영 전이에요. 지금은 청소년상담 1388(전화·문자·카카오톡)에서 익명으로 상담할 수 있어요.'}
                   </div>
                 </div>
 
