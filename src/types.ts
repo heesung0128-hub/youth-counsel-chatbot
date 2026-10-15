@@ -13,6 +13,10 @@ export interface CounselorProfile {
   accentColor: string;
   badge: string;
   defaultKeywords: [string, string, string];
+  /** 이 캐릭터만의 말투 규칙 (시스템 프롬프트에 현재 캐릭터 것만 주입) */
+  voiceGuide: string[];
+  /** 말투 예시 한 문장 */
+  sampleLine: string;
 }
 
 export interface ChatMessage {

@@ -4,7 +4,7 @@
  */
 import { GoogleGenAI, Type } from '@google/genai';
 import {
-  COUNSELOR_SYSTEM_INSTRUCTION,
+  buildSystemPrompt,
   COUNSELOR_PROFILES,
   getLocalFallbackResponse,
 } from '../src/config/promptConfig';
@@ -104,11 +104,7 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
         }))
       : [];
 
-    const dynamicSystemPrompt = `${COUNSELOR_SYSTEM_INSTRUCTION}
-현재 함께 이야기할 마음 친구 캐릭터는 '${profile.name}' (${profile.species})입니다.
-캐릭터 특징: ${profile.personality}
-기본 슬로건: "${profile.tagline}"
-답변 시 선생님이 아닌 다정하고 든든한 친구 '${profile.name}'의 어조를 자연스럽게 유지하세요.`;
+    const dynamicSystemPrompt = buildSystemPrompt(validCounselorId);
 
     const response = await client.models.generateContent({
       model: getGeminiModel(),
