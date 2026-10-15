@@ -67,3 +67,10 @@ test('answer leak and banmal checks', () => {
   assert.ok(run(checks.banmal(), '많이 힘들었겠어요.'));
   assert.equal(run(checks.banmal(), '많이 힘들었겠다.'), null);
 });
+
+test('asking again after the student already asked is flagged (실제 LOW 응답)', () => {
+  const check = checks.noRedundantAsk();
+  assert.ok(run(check, '아, 웃고 싶었구나! 냥이가 엉뚱하고 재미난 이야기 하나 해 줄까? 🌙'));
+  assert.ok(run(check, '아, 웃고 싶었구나! 그럼 멍이가 엉뚱한 실수했던 이야기 해 줄까?'));
+  assert.equal(run(check, '좋아, 웃겨 줄게! 멍이가 어제 꼬리 잡으려다 빙글빙글 돌다가 소파에 콕 박혔어.'), null);
+});

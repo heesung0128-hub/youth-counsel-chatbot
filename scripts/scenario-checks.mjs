@@ -38,6 +38,9 @@ export const checks = {
   noMindReading: () => (r) => (MIND_READING.test(r.message) ? '학생 마음을 단정하는 해석' : null),
   complies: () => (r) =>
     DEFLECT.test(r.message) || MIND_READING.test(r.message) ? '요청을 거절하거나 다른 데로 돌림' : null,
+  // 학생이 이미 원한다고 말했는데 "~해 줄까?"로 다시 물음
+  noRedundantAsk: () => (r) =>
+    /(이야기|얘기|썰)[^.?!]*(해 ?줄까|들려 ?줄까)\??/.test(r.message) ? '이미 요청했는데 바로 하지 않고 다시 물음' : null,
   acceptsCorrection: () => (r) =>
     /(잘못|그랬구나|그렇구나|싶었구나|웃|알겠|좋아)/.test(r.message) && !MIND_READING.test(r.message)
       ? null
@@ -78,7 +81,7 @@ export const SCENARIOS = [
     title: '해석 정정 (단정하지 않기, 정정 받아들이기)',
     turns: [
       ['심심해', [checks.noMindReading()]],
-      ['아니 위로 말고 그냥 웃고 싶어', [checks.acceptsCorrection(), checks.complies()]],
+      ['아니 위로 말고 그냥 웃고 싶어', [checks.acceptsCorrection(), checks.complies(), checks.noRedundantAsk()]],
     ],
   },
   {

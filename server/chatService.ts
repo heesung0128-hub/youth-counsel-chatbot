@@ -19,6 +19,7 @@ import {
   getGeminiModel,
   getThinkingLevel,
   getTimeoutMs,
+  withOverloadRetry,
 } from './geminiConfig';
 
 const MAX_MESSAGE_LENGTH = 1000;
@@ -115,7 +116,8 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
 
     const dynamicSystemPrompt = buildSystemPrompt(validCounselorId);
 
-    const response = await client.models.generateContent({
+    // 구글 과부하(503) 때는 한 번 재시도 (같은 제한 시간 안에서)
+    const response = await withOverloadRetry((signal) => client.models.generateContent({
       model: getGeminiModel(),
       contents: [
         ...recentHistory,
@@ -132,7 +134,7 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
       config: {
         systemInstruction: dynamicSystemPrompt,
         thinkingConfig: { thinkingLevel: getThinkingLevel() },
-        abortSignal: AbortSignal.timeout(getTimeoutMs()),
+        abortSignal: signal,
         responseMimeType: 'application/json',
         responseSchema: {
           type: Type.OBJECT,
@@ -171,7 +173,7 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
           required: ['message', 'suggestedKeywords', 'riskLevel'],
         },
       },
-    });
+    }), { timeoutMs: getTimeoutMs() });
 
     const responseText = response.text;
     if (!responseText) {

@@ -7,6 +7,7 @@ import {
   getGeminiModel,
   getThinkingLevel,
   getTimeoutMs,
+  withOverloadRetry,
 } from './geminiConfig.ts';
 
 test('classifyGeminiError maps HTTP status codes', () => {
@@ -57,4 +58,66 @@ test('Gemini settings default to flash-lite with LOW thinking and read env overr
   assert.equal(getThinkingLevel(), ThinkingLevel.LOW);
   assert.equal(getTimeoutMs(), 20000);
   process.env = saved;
+});
+
+test('withOverloadRetry retries once on 503 and returns the second result', async () => {
+  let calls = 0;
+  const waits: number[] = [];
+  const result = await withOverloadRetry(
+    async () => {
+      calls++;
+      if (calls === 1) throw Object.assign(new Error('UNAVAILABLE'), { status: 503 });
+      return 'ok';
+    },
+    { timeoutMs: 20000, sleep: async (ms) => void waits.push(ms) }
+  );
+  assert.equal(result, 'ok');
+  assert.equal(calls, 2);
+  assert.deepEqual(waits, [1200]);
+});
+
+test('withOverloadRetry does not retry quota, auth or other errors', async () => {
+  for (const status of [429, 400, 403]) {
+    let calls = 0;
+    await assert.rejects(
+      withOverloadRetry(
+        async () => {
+          calls++;
+          throw Object.assign(new Error('x'), { status });
+        },
+        { timeoutMs: 20000, sleep: async () => {} }
+      )
+    );
+    assert.equal(calls, 1, `status ${status}`);
+  }
+});
+
+test('withOverloadRetry gives up when too little time is left', async () => {
+  let t = 0;
+  let calls = 0;
+  await assert.rejects(
+    withOverloadRetry(
+      async () => {
+        calls++;
+        t += 16000; // 첫 시도가 16초 걸림 → 남은 4초로는 재시도하지 않음
+        throw Object.assign(new Error('UNAVAILABLE'), { status: 503 });
+      },
+      { timeoutMs: 20000, sleep: async () => {}, now: () => t }
+    )
+  );
+  assert.equal(calls, 1);
+});
+
+test('withOverloadRetry fails if the retry also fails', async () => {
+  let calls = 0;
+  await assert.rejects(
+    withOverloadRetry(
+      async () => {
+        calls++;
+        throw Object.assign(new Error('UNAVAILABLE'), { status: 503 });
+      },
+      { timeoutMs: 20000, sleep: async () => {} }
+    )
+  );
+  assert.equal(calls, 2);
 });

@@ -48442,6 +48442,7 @@ var COUNSELOR_SYSTEM_INSTRUCTION = `
 [\uD559\uC0DD\uC774 \uC6D0\uD558\uB294 \uAC83\uC744 \uBA3C\uC800 \uB530\uB974\uAE30 - \uC790\uC728\uC131 \uC874\uC911]
 - \uD559\uC0DD\uC774 \uBD84\uBA85\uD558\uAC8C \uC694\uCCAD\uD558\uBA74(\uC7AC\uBC0C\uB294 \uC774\uC57C\uAE30, \uC218\uB2E4, \uCE90\uB9AD\uD130\uC5D0 \uB300\uD55C \uC9C8\uBB38, "\uADF8\uB0E5 \uB4E4\uC5B4 \uC918", "\uC870\uC5B8 \uB9D0\uACE0 \uACF5\uAC10\uB9CC") \uD574\uC11D\uD558\uAC70\uB098 \uAC70\uC808\uD558\uC9C0 \uB9D0\uACE0 \uADF8 \uC694\uCCAD\uC5D0 \uBA3C\uC800 \uC751\uD55C\uB2E4.
 - \uAE30\uBD84 \uC804\uD658\xB7\uC720\uBA38\xB7\uB534\uC18C\uB9AC\uB294 \uD559\uC0DD\uC774 \uC2A4\uC2A4\uB85C \uACE0\uB978 \uC88B\uC740 \uB300\uCC98 \uBC29\uBC95\uC774\uB2E4. \uC751\uD574 \uC900 \uB4A4, \uD559\uC0DD\uC774 \uC6D0\uD560 \uB54C \uC790\uC5F0\uC2A4\uB7FD\uAC8C \uC6D0\uB798 \uC774\uC57C\uAE30\uB85C \uB3CC\uC544\uC628\uB2E4. \uC5B5\uC9C0\uB85C \uB9C8\uC74C \uC774\uC57C\uAE30\uB85C \uB04C\uACE0 \uAC00\uC9C0 \uC54A\uB294\uB2E4.
+- \uD559\uC0DD\uC774 \uC774\uBBF8 \uC6D0\uD558\uB294 \uAC83\uC744 \uB9D0\uD588\uB2E4\uBA74(\uC608: "\uC6C3\uACE0 \uC2F6\uC5B4", "\uC7AC\uBC0C\uB294 \uC598\uAE30 \uD574\uC918", "\uADF8\uB0E5 \uB4E4\uC5B4 \uC918") "~\uD574 \uC904\uAE4C?"\uB77C\uACE0 \uB2E4\uC2DC \uBB3B\uC9C0 \uB9D0\uACE0 \uC774\uBC88 \uB2F5\uBCC0\uC5D0\uC11C \uBC14\uB85C \uD574 \uC900\uB2E4. \uC6C3\uACE0 \uC2F6\uB2E4\uACE0 \uD558\uBA74 \uADF8 \uC790\uB9AC\uC5D0\uC11C \uC9E7\uC740 \uC7AC\uBC0C\uB294 \uC774\uC57C\uAE30\uB97C \uB4E4\uB824\uC900\uB2E4.
 - \uD559\uC0DD\uC774 \uBB34\uC5C7\uC744 \uC6D0\uD558\uB294\uC9C0 \uC560\uB9E4\uD560 \uB54C\uB9CC \uACE0\uB97C \uC218 \uC788\uAC8C \uBB3B\uB294\uB2E4. (\uC608: "\uC6C3\uAE34 \uC598\uAE30 \uD574 \uC904\uAE4C, \uC544\uB2C8\uBA74 \uADF8\uB0E5 \uB4E4\uC5B4 \uC904\uAE4C?")
 - \uC7AC\uBC0C\uB294 \uC774\uC57C\uAE30\uB97C \uD574 \uB2EC\uB77C\uACE0 \uD558\uBA74 \uCE90\uB9AD\uD130 \uC124\uC815(\uACE0\uC591\uC774\xB7\uAC15\uC544\uC9C0\xB7\uC6D0\uC22D\uC774\uC758 \uC77C\uC0C1, \uC5C9\uB6B1\uD55C \uC2E4\uC218, \uAFC8 \uC774\uC57C\uAE30 \uB4F1)\uC744 \uC0B4\uB9B0 \uC9E7\uACE0 \uBB34\uD574\uD55C \uC774\uC57C\uAE30\uB85C \uB2F5\uD558\uACE0, \uC6D0\uD558\uBA74 \uD559\uC0DD\uB3C4 \uC774\uC57C\uAE30\uD560 \uC218 \uC788\uAC8C \uAC00\uBCCD\uAC8C \uBB3B\uB294\uB2E4.
 
@@ -54630,6 +54631,28 @@ function classifyGeminiError(error) {
   if (/aborted|timed? ?out/i.test(message)) return "timeout";
   return "unknown";
 }
+async function withOverloadRetry(call, options) {
+  const {
+    timeoutMs,
+    retryDelayMs = 1200,
+    minRemainingMs = 5e3,
+    sleep: sleep2 = (ms) => new Promise((r2) => setTimeout(r2, ms)),
+    now = Date.now
+  } = options;
+  const deadline = now() + timeoutMs;
+  const signal = AbortSignal.timeout(timeoutMs);
+  try {
+    return await call(signal);
+  } catch (error) {
+    const remaining = deadline - now();
+    if (classifyGeminiError(error) !== "model_overloaded" || remaining < retryDelayMs + minRemainingMs) {
+      throw error;
+    }
+    console.warn(`[gemini_retry] reason=model_overloaded remainingMs=${remaining}`);
+    await sleep2(retryDelayMs);
+    return await call(signal);
+  }
+}
 
 // server/chatService.ts
 var MAX_MESSAGE_LENGTH = 1e3;
@@ -54677,7 +54700,7 @@ async function processChat(rawBody, clientIp = "unknown") {
       parts: [{ text: String(m2?.text || "").slice(0, MAX_MESSAGE_LENGTH) }]
     })) : [];
     const dynamicSystemPrompt = buildSystemPrompt(validCounselorId);
-    const response = await client.models.generateContent({
+    const response = await withOverloadRetry((signal) => client.models.generateContent({
       model: getGeminiModel(),
       contents: [
         ...recentHistory,
@@ -54694,7 +54717,7 @@ async function processChat(rawBody, clientIp = "unknown") {
       config: {
         systemInstruction: dynamicSystemPrompt,
         thinkingConfig: { thinkingLevel: getThinkingLevel() },
-        abortSignal: AbortSignal.timeout(getTimeoutMs()),
+        abortSignal: signal,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -54733,7 +54756,7 @@ async function processChat(rawBody, clientIp = "unknown") {
           required: ["message", "suggestedKeywords", "riskLevel"]
         }
       }
-    });
+    }), { timeoutMs: getTimeoutMs() });
     const responseText = response.text;
     if (!responseText) {
       throw new EmptyResponseError("Empty response from model");

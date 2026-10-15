@@ -80,3 +80,41 @@ export function classifyGeminiError(error: unknown): GeminiFailureReason {
   if (/aborted|timed? ?out/i.test(message)) return 'timeout';
   return 'unknown';
 }
+
+/**
+ * 구글 서버 과부하(500/503)일 때만 잠시 뒤 한 번 다시 시도.
+ * - 두 번의 시도가 하나의 제한 시간(timeoutMs)을 함께 씀 → Vercel 함수 제한(30초)을 넘지 않음
+ * - 남은 시간이 부족하면 재시도하지 않고 바로 실패(→ 내장 응답)
+ * - 한도 초과(429)·키 오류 등은 다시 시도해도 같으므로 재시도하지 않음
+ */
+export async function withOverloadRetry<T>(
+  call: (signal: AbortSignal) => Promise<T>,
+  options: {
+    timeoutMs: number;
+    retryDelayMs?: number;
+    minRemainingMs?: number;
+    sleep?: (ms: number) => Promise<void>;
+    now?: () => number;
+  }
+): Promise<T> {
+  const {
+    timeoutMs,
+    retryDelayMs = 1200,
+    minRemainingMs = 5000,
+    sleep = (ms) => new Promise((r) => setTimeout(r, ms)),
+    now = Date.now,
+  } = options;
+  const deadline = now() + timeoutMs;
+  const signal = AbortSignal.timeout(timeoutMs);
+  try {
+    return await call(signal);
+  } catch (error) {
+    const remaining = deadline - now();
+    if (classifyGeminiError(error) !== 'model_overloaded' || remaining < retryDelayMs + minRemainingMs) {
+      throw error;
+    }
+    console.warn(`[gemini_retry] reason=model_overloaded remainingMs=${remaining}`);
+    await sleep(retryDelayMs);
+    return await call(signal);
+  }
+}
