@@ -48357,7 +48357,8 @@ var COUNSELOR_PROFILES = {
       "\uB9D0\uC904\uC784\uD45C(\u2026)\uB97C \uAC00\uB054 \uC368\uC11C \uC5EC\uC720\uB97C \uC900\uB2E4. \uB290\uB08C\uD45C\uB294 \uAC70\uC758 \uC4F0\uC9C0 \uC54A\uB294\uB2E4.",
       "\uC774\uBAA8\uC9C0\uB97C \uC4F8 \uB54C\uB294 \u{1F43E} \uB610\uB294 \u{1F319} \uC911 \uD558\uB098\uB9CC."
     ],
-    sampleLine: "\uADF8\uB7AC\uAD6C\uB098\u2026 \uB9CE\uC774 \uC18D\uC0C1\uD588\uACA0\uB2E4. \uCC9C\uCC9C\uD788 \uB9D0\uD574\uB3C4 \uAD1C\uCC2E\uC544, \uB0E5\uC774\uB294 \uC5EC\uAE30 \uC788\uC744\uAC8C. \u{1F43E}"
+    sampleLine: "\uADF8\uB7AC\uAD6C\uB098\u2026 \uB9CE\uC774 \uC18D\uC0C1\uD588\uACA0\uB2E4. \uCC9C\uCC9C\uD788 \uB9D0\uD574\uB3C4 \uAD1C\uCC2E\uC544, \uB0E5\uC774\uB294 \uC5EC\uAE30 \uC788\uC744\uAC8C. \u{1F43E}",
+    crisisMessage: "\uADF8\uB7F0 \uB9C8\uC74C\uAE4C\uC9C0 \uB4E4\uC5C8\uAD6C\uB098\u2026 \uB9D0\uD574 \uC918\uC11C \uC815\uB9D0 \uACE0\uB9C8\uC6CC. \uC9C0\uAE08\uC740 \uB124 \uC548\uC804\uC774 \uC81C\uC77C \uC911\uC694\uD574. \uD63C\uC790 \uACAC\uB514\uC9C0 \uB9D0\uACE0 24\uC2DC\uAC04 \uC5F4\uB824 \uC788\uB294 \uCCAD\uC18C\uB144\uC0C1\uB2F4 1388\uC774\uB098 \uC790\uC0B4\uC608\uBC29 \uC0C1\uB2F4\uC804\uD654 109\uC5D0 \uC9C0\uAE08 \uC5F0\uB77D\uD574 \uC904\uB798? \uB0E5\uC774\uB3C4 \uC5EC\uAE30 \uC788\uC744\uAC8C."
   },
   dog: {
     id: "dog",
@@ -48379,7 +48380,8 @@ var COUNSELOR_PROFILES = {
       "\uC704\uAE30(crisis)\uC774\uAC70\uB098 \uC548\uC804 \uD655\uC778 \uC9C8\uBB38\uC744 \uD558\uB294 \uB2F5\uBCC0\uC5D0\uC11C\uB294 \uCE6D\uCC2C\xB7\uB290\uB08C\uD45C\xB7\uB4E4\uB72C \uD45C\uD604 \uC5C6\uC774 \uCC28\uBD84\uD558\uACE0 \uB2E8\uB2E8\uD558\uAC8C \uB9D0\uD55C\uB2E4.",
       "\uC774\uBAA8\uC9C0\uB97C \uC4F8 \uB54C\uB294 \u{1F436} \uB610\uB294 \u{1F49B} \uC911 \uD558\uB098\uB9CC."
     ],
-    sampleLine: "\uC2DC\uD5D8 \uB05D\uB0A0 \uB54C\uAE4C\uC9C0 \uD3EC\uAE30 \uC548 \uD558\uACE0 \uBC84\uD2F4 \uAC70, \uC9C4\uC9DC \uBA4B\uC9C0\uB2E4! \uBA4D\uC774\uAC00 \uAF2C\uB9AC \uD754\uB4E4\uBA70 \uC751\uC6D0\uD560\uAC8C."
+    sampleLine: "\uC2DC\uD5D8 \uB05D\uB0A0 \uB54C\uAE4C\uC9C0 \uD3EC\uAE30 \uC548 \uD558\uACE0 \uBC84\uD2F4 \uAC70, \uC9C4\uC9DC \uBA4B\uC9C0\uB2E4! \uBA4D\uC774\uAC00 \uAF2C\uB9AC \uD754\uB4E4\uBA70 \uC751\uC6D0\uD560\uAC8C.",
+    crisisMessage: "\uADF8 \uBB34\uAC70\uC6B4 \uB9C8\uC74C\uC744 \uAEBC\uB0B4 \uC918\uC11C \uACE0\uB9C8\uC6CC. \uBA4D\uC774\uB294 \uB124\uAC00 \uC815\uB9D0 \uC18C\uC911\uD574\uC11C, \uC9C0\uAE08\uC740 \uAF2D \uC0AC\uB78C\uC758 \uB3C4\uC6C0\uC744 \uBC1B\uC558\uC73C\uBA74 \uD574. 24\uC2DC\uAC04 \uCCAD\uC18C\uB144\uC0C1\uB2F4 1388\uC774\uB098 \uC790\uC0B4\uC608\uBC29 \uC0C1\uB2F4\uC804\uD654 109\uC5D0 \uBC14\uB85C \uC5F0\uB77D\uD574 \uC918. \uBA4D\uC774\uB3C4 \uACC1\uC5D0 \uC788\uC744\uAC8C."
   },
   monkey: {
     id: "monkey",
@@ -48399,7 +48401,8 @@ var COUNSELOR_PROFILES = {
       "\uCC28\uBD84\uD558\uACE0 \uBA85\uB8CC\uD558\uAC8C, \uB290\uB08C\uD45C\uB294 \uAC70\uC758 \uC4F0\uC9C0 \uC54A\uB294\uB2E4.",
       "\uC774\uBAA8\uC9C0\uB97C \uC4F8 \uB54C\uB294 \u{1F331} \uB610\uB294 \u{1F34C} \uC911 \uD558\uB098\uB9CC."
     ],
-    sampleLine: "\uC9C0\uAE08 \uC774\uC57C\uAE30\uB97C \uB098\uB220 \uBCF4\uBA74, \uC77C\uC5B4\uB09C \uC77C\uC740 \uD558\uB098\uC778\uB370 \uAC71\uC815\uC740 \uB450 \uAC08\uB798\uC778 \uAC83 \uAC19\uC544. \uC5B4\uB290 \uCABD\uBD80\uD130 \uD480\uC5B4 \uBCFC\uAE4C? \u{1F331}"
+    sampleLine: "\uC9C0\uAE08 \uC774\uC57C\uAE30\uB97C \uB098\uB220 \uBCF4\uBA74, \uC77C\uC5B4\uB09C \uC77C\uC740 \uD558\uB098\uC778\uB370 \uAC71\uC815\uC740 \uB450 \uAC08\uB798\uC778 \uAC83 \uAC19\uC544. \uC5B4\uB290 \uCABD\uBD80\uD130 \uD480\uC5B4 \uBCFC\uAE4C? \u{1F331}",
+    crisisMessage: "\uADF8\uB807\uAC8C\uAE4C\uC9C0 \uD798\uB4E4\uC5C8\uB2E4\uB294 \uAC78 \uB9D0\uD574 \uC918\uC11C \uACE0\uB9C8\uC6CC. \uC9C0\uAE08\uC740 \uD558\uB098\uC529 \uD480\uAE30\uBCF4\uB2E4 \uB124 \uC548\uC804\uC774 \uBA3C\uC800\uC57C. 24\uC2DC\uAC04 \uCCAD\uC18C\uB144\uC0C1\uB2F4 1388\uC774\uB098 \uC790\uC0B4\uC608\uBC29 \uC0C1\uB2F4\uC804\uD654 109\uC5D0 \uC9C0\uAE08 \uC5F0\uB77D\uD574\uC11C \uB3C4\uC6C0\uC744 \uBC1B\uC544 \uC918. \uBABD\uC774\uB3C4 \uACC4\uC18D \uACC1\uC5D0 \uC788\uC744\uAC8C."
   }
 };
 var COUNSELOR_SYSTEM_INSTRUCTION = `
@@ -48510,7 +48513,7 @@ function getLocalFallbackResponse(counselorId, userMessage, riskLevel, options =
   }
   if (riskLevel === "crisis") {
     return {
-      message: `${profile.name}\uB294 \uB124 \uC774\uC57C\uAE30\uB97C \uB4E3\uACE0 \uC815\uB9D0 \uB9CE\uC774 \uAC71\uC815\uB3FC. \uC9C0\uAE08 \uB124\uAC00 \uB290\uB07C\uB294 \uC544\uD514\uC740 \uD63C\uC790 \uC9CA\uC5B4\uC9C8 \uC77C\uC774 \uC544\uB2C8\uC57C. \uBE44\uBC00\uC774 \uBCF4\uC7A5\uB418\uACE0 \uB108\uB97C \uC9C0\uCF1C\uC904 \uC218 \uC788\uB294 24\uC2DC\uAC04 \uCCAD\uC18C\uB144 \uC804\uBB38 \uC0C1\uB2F4 \uC804\uD654(1388, 109)\uC5D0 \uC9C0\uAE08 \uBC14\uB85C \uC5F0\uB77D\uD574 \uBCFC\uB798? ${profile.name}\uAC00 \uAF2D \uACC1\uC5D0 \uC788\uC744\uAC8C.`,
+      message: profile.crisisMessage,
       suggestedKeywords: ["\uB3C4\uC6C0\uC774 \uD544\uC694\uD574", "1388 \uC804\uD654\uD560\uB798", "\uC870\uAE08 \uB354 \uC774\uC57C\uAE30\uD560\uB798"],
       riskLevel: "crisis",
       shouldOfferReferral: true,
@@ -54549,6 +54552,13 @@ function resolveSafetyCheck(input) {
     shouldOfferReferral: typeof modelOfferReferral === "boolean" ? modelOfferReferral : finalRiskLevel === "concern"
   };
 }
+function chooseCrisisSafeMessage(input) {
+  const { modelRiskLevel, finalRiskLevel, modelMessage, crisisMessage } = input;
+  if (finalRiskLevel === "crisis" && modelRiskLevel !== "crisis") {
+    return { message: crisisMessage, overridden: true };
+  }
+  return { message: modelMessage, overridden: false };
+}
 
 // server/geminiConfig.ts
 var DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite";
@@ -54719,17 +54729,24 @@ async function processChat(rawBody, clientIp = "unknown") {
       modelSafetyCheck: parsedData.safetyCheck === true || conversationRisk.needsSafetyCheck,
       modelOfferReferral: parsedData.shouldOfferReferral
     });
+    const crisisFallback = getLocalFallbackResponse(validCounselorId, cleanMessage, "crisis");
+    const { message, overridden } = chooseCrisisSafeMessage({
+      modelRiskLevel: parsedData.riskLevel,
+      finalRiskLevel,
+      modelMessage: avoidConsecutiveEmoji(String(parsedData.message || ""), conversationHistory),
+      crisisMessage: crisisFallback.message
+    });
     return {
       status: 200,
       body: {
-        message: avoidConsecutiveEmoji(String(parsedData.message || ""), conversationHistory),
-        suggestedKeywords: keywords,
+        message,
+        suggestedKeywords: overridden ? crisisFallback.suggestedKeywords : keywords,
         riskLevel: finalRiskLevel,
         counselorNote: parsedData.counselorNote || "",
         shouldOfferReferral,
         safetyCheck,
-        referralStage: parsedData.referralStage || (finalRiskLevel === "crisis" ? 3 : 2),
-        source: "gemini"
+        referralStage: finalRiskLevel === "crisis" ? 3 : parsedData.referralStage || 2,
+        source: overridden ? "gemini_rule_crisis" : "gemini"
       }
     };
   } catch (error) {

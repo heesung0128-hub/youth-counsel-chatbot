@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { avoidConsecutiveEmoji, resolveSafetyCheck } from './responsePolicy.ts';
+import { avoidConsecutiveEmoji, chooseCrisisSafeMessage, resolveSafetyCheck } from './responsePolicy.ts';
 
 test('avoidConsecutiveEmoji strips emoji only when the previous counselor reply had one', () => {
   const withEmoji = [
@@ -46,5 +46,21 @@ test('resolveSafetyCheck keeps normal referral behavior otherwise', () => {
   assert.deepEqual(
     resolveSafetyCheck({ finalRiskLevel: 'safe', heuristicRiskLevel: 'safe', modelSafetyCheck: undefined, modelOfferReferral: false }),
     { safetyCheck: false, shouldOfferReferral: false }
+  );
+});
+
+test('chooseCrisisSafeMessage replaces the model reply only when rules raised the turn to crisis', () => {
+  const crisisMessage = '지금은 네 안전이 제일 중요해. 1388이나 109에 연락해 줄래?';
+  assert.deepEqual(
+    chooseCrisisSafeMessage({ modelRiskLevel: 'concern', finalRiskLevel: 'crisis', modelMessage: '실타래를 짚어볼까? 🌱', crisisMessage }),
+    { message: crisisMessage, overridden: true }
+  );
+  assert.deepEqual(
+    chooseCrisisSafeMessage({ modelRiskLevel: 'crisis', finalRiskLevel: 'crisis', modelMessage: '모델 위기 답변', crisisMessage }),
+    { message: '모델 위기 답변', overridden: false }
+  );
+  assert.deepEqual(
+    chooseCrisisSafeMessage({ modelRiskLevel: 'safe', finalRiskLevel: 'concern', modelMessage: '평소 답변', crisisMessage }),
+    { message: '평소 답변', overridden: false }
   );
 });

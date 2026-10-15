@@ -52,3 +52,15 @@ test('local fallback responses use 반말 for every risk level and character', (
     }
   }
 });
+
+test('each character has a calm crisis message with 1388 and 109 in 반말', () => {
+  for (const id of IDS) {
+    const msg = COUNSELOR_PROFILES[id].crisisMessage;
+    assert.ok(msg.includes('1388') && msg.includes('109'), `${id} crisis numbers`);
+    assert.doesNotMatch(msg, /[!🐾🌙🐶💛🌱🍌]/u, `${id} crisis message should be calm`);
+    for (const sentence of msg.split(/(?<=[.?!])\s+/)) {
+      assert.doesNotMatch(sentence, POLITE_ENDING, `${id}: ${sentence}`);
+    }
+    assert.equal(getLocalFallbackResponse(id, '죽고 싶어', 'crisis').message, msg);
+  }
+});

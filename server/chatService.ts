@@ -12,7 +12,7 @@ import { CounselorId } from '../src/types';
 import { evaluateCrisisSignals } from '../src/utils/crisisDetector';
 import { evaluateConversationRisk } from '../src/utils/conversationRisk';
 import { checkRateLimit, getRateLimitStatus } from './rateLimit';
-import { avoidConsecutiveEmoji, resolveSafetyCheck } from './responsePolicy';
+import { avoidConsecutiveEmoji, chooseCrisisSafeMessage, resolveSafetyCheck } from './responsePolicy';
 import {
   classifyGeminiError,
   EmptyResponseError,
@@ -206,17 +206,26 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
       modelOfferReferral: parsedData.shouldOfferReferral,
     });
 
+    // 규칙으로 위기가 됐는데 모델은 위기로 보지 않았다면, 가벼운 답변 대신 캐릭터별 차분한 위기 안내
+    const crisisFallback = getLocalFallbackResponse(validCounselorId, cleanMessage, 'crisis');
+    const { message, overridden } = chooseCrisisSafeMessage({
+      modelRiskLevel: parsedData.riskLevel,
+      finalRiskLevel,
+      modelMessage: avoidConsecutiveEmoji(String(parsedData.message || ''), conversationHistory),
+      crisisMessage: crisisFallback.message,
+    });
+
     return {
       status: 200,
       body: {
-        message: avoidConsecutiveEmoji(String(parsedData.message || ''), conversationHistory),
-        suggestedKeywords: keywords,
+        message,
+        suggestedKeywords: overridden ? crisisFallback.suggestedKeywords : keywords,
         riskLevel: finalRiskLevel,
         counselorNote: parsedData.counselorNote || '',
         shouldOfferReferral,
         safetyCheck,
-        referralStage: parsedData.referralStage || (finalRiskLevel === 'crisis' ? 3 : 2),
-        source: 'gemini',
+        referralStage: finalRiskLevel === 'crisis' ? 3 : parsedData.referralStage || 2,
+        source: overridden ? 'gemini_rule_crisis' : 'gemini',
       },
     };
   } catch (error) {

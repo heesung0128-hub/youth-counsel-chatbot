@@ -17,6 +17,8 @@ export interface CounselorProfile {
   voiceGuide: string[];
   /** 말투 예시 한 문장 */
   sampleLine: string;
+  /** 위기 안내 문장 (차분한 톤, 1388·109 포함). 내장 응답과 서버 규칙 위기 턴에 사용 */
+  crisisMessage: string;
 }
 
 export interface ChatMessage {

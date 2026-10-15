@@ -49,3 +49,20 @@ export function resolveSafetyCheck(input: {
       typeof modelOfferReferral === 'boolean' ? modelOfferReferral : finalRiskLevel === 'concern',
   };
 }
+
+/**
+ * 서버 규칙(위기 키워드·대화 흐름)으로 위기가 됐는데 모델은 위기로 보지 않은 턴은
+ * 모델 답변(가벼운 말투일 수 있음) 대신 캐릭터별 차분한 위기 안내 문장을 사용.
+ */
+export function chooseCrisisSafeMessage(input: {
+  modelRiskLevel: unknown;
+  finalRiskLevel: RiskLevel;
+  modelMessage: string;
+  crisisMessage: string;
+}): { message: string; overridden: boolean } {
+  const { modelRiskLevel, finalRiskLevel, modelMessage, crisisMessage } = input;
+  if (finalRiskLevel === 'crisis' && modelRiskLevel !== 'crisis') {
+    return { message: crisisMessage, overridden: true };
+  }
+  return { message: modelMessage, overridden: false };
+}

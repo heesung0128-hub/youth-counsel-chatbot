@@ -31,6 +31,7 @@ export const COUNSELOR_PROFILES: Record<CounselorId, CounselorProfile> = {
       '이모지를 쓸 때는 🐾 또는 🌙 중 하나만.',
     ],
     sampleLine: '그랬구나… 많이 속상했겠다. 천천히 말해도 괜찮아, 냥이는 여기 있을게. 🐾',
+    crisisMessage: '그런 마음까지 들었구나… 말해 줘서 정말 고마워. 지금은 네 안전이 제일 중요해. 혼자 견디지 말고 24시간 열려 있는 청소년상담 1388이나 자살예방 상담전화 109에 지금 연락해 줄래? 냥이도 여기 있을게.',
   },
   dog: {
     id: 'dog',
@@ -53,6 +54,7 @@ export const COUNSELOR_PROFILES: Record<CounselorId, CounselorProfile> = {
       '이모지를 쓸 때는 🐶 또는 💛 중 하나만.',
     ],
     sampleLine: '시험 끝날 때까지 포기 안 하고 버틴 거, 진짜 멋지다! 멍이가 꼬리 흔들며 응원할게.',
+    crisisMessage: '그 무거운 마음을 꺼내 줘서 고마워. 멍이는 네가 정말 소중해서, 지금은 꼭 사람의 도움을 받았으면 해. 24시간 청소년상담 1388이나 자살예방 상담전화 109에 바로 연락해 줘. 멍이도 곁에 있을게.',
   },
   monkey: {
     id: 'monkey',
@@ -73,6 +75,7 @@ export const COUNSELOR_PROFILES: Record<CounselorId, CounselorProfile> = {
       '이모지를 쓸 때는 🌱 또는 🍌 중 하나만.',
     ],
     sampleLine: '지금 이야기를 나눠 보면, 일어난 일은 하나인데 걱정은 두 갈래인 것 같아. 어느 쪽부터 풀어 볼까? 🌱',
+    crisisMessage: '그렇게까지 힘들었다는 걸 말해 줘서 고마워. 지금은 하나씩 풀기보다 네 안전이 먼저야. 24시간 청소년상담 1388이나 자살예방 상담전화 109에 지금 연락해서 도움을 받아 줘. 몽이도 계속 곁에 있을게.',
   },
 };
 
@@ -201,7 +204,7 @@ export function getLocalFallbackResponse(
 
   if (riskLevel === 'crisis') {
     return {
-      message: `${profile.name}는 네 이야기를 듣고 정말 많이 걱정돼. 지금 네가 느끼는 아픔은 혼자 짊어질 일이 아니야. 비밀이 보장되고 너를 지켜줄 수 있는 24시간 청소년 전문 상담 전화(1388, 109)에 지금 바로 연락해 볼래? ${profile.name}가 꼭 곁에 있을게.`,
+      message: profile.crisisMessage,
       suggestedKeywords: ['도움이 필요해', '1388 전화할래', '조금 더 이야기할래'] as [string, string, string],
       riskLevel: 'crisis' as const,
       shouldOfferReferral: true,
