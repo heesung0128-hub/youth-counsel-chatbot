@@ -1,7 +1,13 @@
-
 import { CRISIS_KEYWORDS, CONCERN_KEYWORDS } from '../config/crisisConfig.ts';
 
 export { CRISIS_KEYWORDS, CONCERN_KEYWORDS };
+
+/** 공백·대소문자를 무시하고 text에 포함된 키워드 목록을 반환 ("죽고 싶" / "죽고싶" 모두 일치) */
+export function findKeywords(text: string, keywords: readonly string[]): string[] {
+  if (!text || typeof text !== 'string') return [];
+  const normalized = text.toLowerCase().replace(/\s+/g, '');
+  return keywords.filter((k) => normalized.includes(k.toLowerCase().replace(/\s+/g, '')));
+}
 
 export interface CrisisEvaluationResult {
   riskLevel: 'safe' | 'concern' | 'crisis';
@@ -15,28 +21,8 @@ export interface CrisisEvaluationResult {
  * Operates deterministically without relying on network or LLM availability.
  */
 export function evaluateCrisisSignals(text: string): CrisisEvaluationResult {
-  if (!text || typeof text !== 'string') {
-    return {
-      riskLevel: 'safe',
-      matchedKeywords: [],
-      shouldPinEmergencyCard: false,
-      priorityNotice: null,
-    };
-  }
-
-  // 띄어쓰기 변형("죽고 싶" / "죽고싶")을 모두 잡기 위해 공백을 제거한 텍스트로 비교
-  const normalized = text.toLowerCase().replace(/\s+/g, '');
-  const matches = (keyword: string) =>
-    normalized.includes(keyword.toLowerCase().replace(/\s+/g, ''));
-
   // 1. Check High-Risk Crisis Keywords
-  const matchedCrisis: string[] = [];
-  for (const keyword of CRISIS_KEYWORDS) {
-    if (matches(keyword)) {
-      matchedCrisis.push(keyword);
-    }
-  }
-
+  const matchedCrisis = findKeywords(text, CRISIS_KEYWORDS);
   if (matchedCrisis.length > 0) {
     return {
       riskLevel: 'crisis',
@@ -48,13 +34,7 @@ export function evaluateCrisisSignals(text: string): CrisisEvaluationResult {
   }
 
   // 2. Check Moderate Concern Keywords
-  const matchedConcern: string[] = [];
-  for (const keyword of CONCERN_KEYWORDS) {
-    if (matches(keyword)) {
-      matchedConcern.push(keyword);
-    }
-  }
-
+  const matchedConcern = findKeywords(text, CONCERN_KEYWORDS);
   if (matchedConcern.length > 0) {
     return {
       riskLevel: 'concern',

@@ -48497,8 +48497,17 @@ ${profile.voiceGuide.map((rule) => `- ${rule}`).join("\n")}
 
 \uB2F5\uBCC0 \uC2DC \uC120\uC0DD\uB2D8\uC774 \uC544\uB2CC \uB2E4\uC815\uD558\uACE0 \uB4E0\uB4E0\uD55C \uCE5C\uAD6C '${profile.name}'\uC758 \uB9D0\uD22C\uB97C \uB05D\uAE4C\uC9C0 \uC720\uC9C0\uD558\uACE0, \uBC18\uB9D0\uB85C\uB9CC \uB2F5\uD55C\uB2E4.`;
 }
-function getLocalFallbackResponse(counselorId, userMessage, riskLevel) {
+function getLocalFallbackResponse(counselorId, userMessage, riskLevel, options = {}) {
   const profile = COUNSELOR_PROFILES[counselorId] ?? COUNSELOR_PROFILES.cat;
+  if (options.safetyCheck && riskLevel !== "crisis") {
+    return {
+      message: `${profile.name}\uB294 \uBC29\uAE08 \uB124 \uB9D0\uC774 \uB9C8\uC74C\uC5D0 \uAC78\uB824. \uD639\uC2DC \uC0AC\uB77C\uC9C0\uACE0 \uC2F6\uB2E4\uAC70\uB098 \uC2A4\uC2A4\uB85C\uB97C \uD574\uCE58\uACE0 \uC2F6\uC740 \uC0DD\uAC01\uAE4C\uC9C0 \uB4E4 \uB54C\uB3C4 \uC788\uC5B4?`,
+      suggestedKeywords: ["\uADF8 \uC815\uB3C4\uB294 \uC544\uB2C8\uC57C", "\uC0AC\uC2E4 \uAC00\uB054 \uADF8\uB798", "\uB9D0\uD558\uAE30 \uC5B4\uB824\uC6CC"],
+      riskLevel: "concern",
+      shouldOfferReferral: false,
+      safetyCheck: true
+    };
+  }
   if (riskLevel === "crisis") {
     return {
       message: `${profile.name}\uB294 \uB124 \uC774\uC57C\uAE30\uB97C \uB4E3\uACE0 \uC815\uB9D0 \uB9CE\uC774 \uAC71\uC815\uB3FC. \uC9C0\uAE08 \uB124\uAC00 \uB290\uB07C\uB294 \uC544\uD514\uC740 \uD63C\uC790 \uC9CA\uC5B4\uC9C8 \uC77C\uC774 \uC544\uB2C8\uC57C. \uBE44\uBC00\uC774 \uBCF4\uC7A5\uB418\uACE0 \uB108\uB97C \uC9C0\uCF1C\uC904 \uC218 \uC788\uB294 24\uC2DC\uAC04 \uCCAD\uC18C\uB144 \uC804\uBB38 \uC0C1\uB2F4 \uC804\uD654(1388, 109)\uC5D0 \uC9C0\uAE08 \uBC14\uB85C \uC5F0\uB77D\uD574 \uBCFC\uB798? ${profile.name}\uAC00 \uAF2D \uACC1\uC5D0 \uC788\uC744\uAC8C.`,
@@ -48577,25 +48586,31 @@ var CONCERN_KEYWORDS = [
   "\uC655\uB530",
   "\uC740\uB530"
 ];
+var INDIRECT_SIGNAL_KEYWORDS = [
+  "\uB2E4 \uADF8\uB9CC\uD558\uACE0 \uC2F6",
+  "\uBAA8\uB4E0 \uAC78 \uADF8\uB9CC\uD558\uACE0 \uC2F6",
+  "\uB0B4\uAC00 \uC5C6\uC5B4\uC838\uB3C4",
+  "\uB0B4\uAC00 \uC5C6\uC5B4\uC9C0\uBA74",
+  "\uB0B4\uAC00 \uC0AC\uB77C\uC838\uB3C4",
+  "\uB0B4\uAC00 \uC0AC\uB77C\uC9C0\uBA74",
+  "\uC0AC\uB294 \uAC8C \uC758\uBBF8 \uC5C6",
+  "\uC0B4\uC544\uB3C4 \uC758\uBBF8 \uC5C6",
+  "\uB2E4 \uC758\uBBF8 \uC5C6",
+  "\uB2E4 \uB193\uACE0 \uC2F6",
+  "\uB2E4 \uD3EC\uAE30\uD558\uACE0 \uC2F6",
+  "\uC0B4 \uC774\uC720",
+  "\uD0DC\uC5B4\uB098\uC9C0 \uB9D0",
+  "\uC548 \uAE68\uC5B4\uB0AC\uC73C\uBA74"
+];
 
 // src/utils/crisisDetector.ts
-function evaluateCrisisSignals(text) {
-  if (!text || typeof text !== "string") {
-    return {
-      riskLevel: "safe",
-      matchedKeywords: [],
-      shouldPinEmergencyCard: false,
-      priorityNotice: null
-    };
-  }
+function findKeywords(text, keywords) {
+  if (!text || typeof text !== "string") return [];
   const normalized = text.toLowerCase().replace(/\s+/g, "");
-  const matches = (keyword) => normalized.includes(keyword.toLowerCase().replace(/\s+/g, ""));
-  const matchedCrisis = [];
-  for (const keyword of CRISIS_KEYWORDS) {
-    if (matches(keyword)) {
-      matchedCrisis.push(keyword);
-    }
-  }
+  return keywords.filter((k) => normalized.includes(k.toLowerCase().replace(/\s+/g, "")));
+}
+function evaluateCrisisSignals(text) {
+  const matchedCrisis = findKeywords(text, CRISIS_KEYWORDS);
   if (matchedCrisis.length > 0) {
     return {
       riskLevel: "crisis",
@@ -48604,12 +48619,7 @@ function evaluateCrisisSignals(text) {
       priorityNotice: "\uC9C0\uAE08 \uB9CE\uC774 \uD798\uB4E4\uACE0 \uC704\uD5D8\uD55C \uC0C1\uD669\uC77C \uC218 \uC788\uC5B4\uC694. 24\uC2DC\uAC04 \uC5B8\uC81C\uB098 \uC5F4\uB824 \uC788\uB294 \uC548\uC804 \uC0C1\uB2F4\uB9DD(1388, 109)\uC5D0 \uC989\uC2DC \uB3C4\uC6C0\uC744 \uC694\uCCAD\uD560 \uC218 \uC788\uC5B4\uC694."
     };
   }
-  const matchedConcern = [];
-  for (const keyword of CONCERN_KEYWORDS) {
-    if (matches(keyword)) {
-      matchedConcern.push(keyword);
-    }
-  }
+  const matchedConcern = findKeywords(text, CONCERN_KEYWORDS);
   if (matchedConcern.length > 0) {
     return {
       riskLevel: "concern",
@@ -48624,6 +48634,33 @@ function evaluateCrisisSignals(text) {
     shouldPinEmergencyCard: false,
     priorityNotice: null
   };
+}
+
+// src/utils/conversationRisk.ts
+var RECENT_USER_MESSAGES = 4;
+function evaluateConversationRisk(current, history) {
+  const recentUserTexts = (Array.isArray(history) ? history : []).filter((m2) => m2 && m2.sender === "user" && typeof m2.text === "string").map((m2) => m2.text).slice(-RECENT_USER_MESSAGES);
+  const has = (text, list) => findKeywords(text, list).length > 0;
+  if (has(current, CRISIS_KEYWORDS)) {
+    return { riskLevel: "crisis", needsSafetyCheck: false };
+  }
+  const indirectNow = has(current, INDIRECT_SIGNAL_KEYWORDS);
+  const indirectBefore = recentUserTexts.some((t2) => has(t2, INDIRECT_SIGNAL_KEYWORDS));
+  const crisisBefore = recentUserTexts.some((t2) => has(t2, CRISIS_KEYWORDS));
+  if (indirectNow && (indirectBefore || crisisBefore)) {
+    return { riskLevel: "crisis", needsSafetyCheck: false };
+  }
+  if (indirectNow) {
+    return { riskLevel: "concern", needsSafetyCheck: true };
+  }
+  if (crisisBefore) {
+    return { riskLevel: "concern", needsSafetyCheck: false };
+  }
+  const concernCount = (has(current, CONCERN_KEYWORDS) ? 1 : 0) + recentUserTexts.filter((t2) => has(t2, CONCERN_KEYWORDS) || has(t2, INDIRECT_SIGNAL_KEYWORDS)).length;
+  if (has(current, CONCERN_KEYWORDS) || concernCount >= 2) {
+    return { riskLevel: "concern", needsSafetyCheck: false };
+  }
+  return { riskLevel: "safe", needsSafetyCheck: false };
 }
 
 // server/rateLimit.ts
@@ -54580,16 +54617,20 @@ async function processChat(rawBody, clientIp = "unknown") {
     return { status: 400, body: { error: "Message cannot be empty" } };
   }
   const heuristicCheck = evaluateCrisisSignals(cleanMessage);
+  const conversationRisk = evaluateConversationRisk(cleanMessage, conversationHistory);
+  const localFallback = () => getLocalFallbackResponse(validCounselorId, cleanMessage, conversationRisk.riskLevel, {
+    safetyCheck: conversationRisk.needsSafetyCheck
+  });
   try {
     const client = getClient();
     if (!client) {
-      const fallback = getLocalFallbackResponse(validCounselorId, cleanMessage, heuristicCheck.riskLevel);
+      const fallback = localFallback();
       return { status: 200, body: { ...fallback, source: "local_engine" } };
     }
     const limit = await checkRateLimit(clientIp);
     if (limit.limited) {
       console.warn("Rate limited:", limit.reason);
-      const fallback = getLocalFallbackResponse(validCounselorId, cleanMessage, heuristicCheck.riskLevel);
+      const fallback = localFallback();
       return { status: 200, body: { ...fallback, source: "rate_limited" } };
     }
     const profile = COUNSELOR_PROFILES[validCounselorId];
@@ -54695,7 +54736,7 @@ async function processChat(rawBody, clientIp = "unknown") {
       `[gemini_fallback] reason=${fallbackReason} model=${getGeminiModel()} status=${status ?? "-"}`,
       error instanceof Error ? error.message.slice(0, 500) : error
     );
-    const fallback = getLocalFallbackResponse(validCounselorId, cleanMessage, heuristicCheck.riskLevel);
+    const fallback = localFallback();
     return { status: 200, body: { ...fallback, source: "fallback_recovery", fallbackReason } };
   }
 }

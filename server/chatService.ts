@@ -10,6 +10,7 @@ import {
 } from '../src/config/promptConfig';
 import { CounselorId } from '../src/types';
 import { evaluateCrisisSignals } from '../src/utils/crisisDetector';
+import { evaluateConversationRisk } from '../src/utils/conversationRisk';
 import { checkRateLimit, getRateLimitStatus } from './rateLimit';
 import { avoidConsecutiveEmoji, resolveSafetyCheck } from './responsePolicy';
 import {
@@ -78,12 +79,19 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
   // 1. 서버 측 규칙 기반 1차 안전 점검
   const heuristicCheck = evaluateCrisisSignals(cleanMessage);
 
+  // AI 응답을 쓸 수 없을 때(키 없음·한도 초과·오류)는 최근 대화 흐름까지 본 규칙 판단으로 내장 응답
+  const conversationRisk = evaluateConversationRisk(cleanMessage, conversationHistory);
+  const localFallback = () =>
+    getLocalFallbackResponse(validCounselorId, cleanMessage, conversationRisk.riskLevel, {
+      safetyCheck: conversationRisk.needsSafetyCheck,
+    });
+
   try {
     const client = getClient();
 
     // API 키가 없으면 내장 응답 엔진 사용
     if (!client) {
-      const fallback = getLocalFallbackResponse(validCounselorId, cleanMessage, heuristicCheck.riskLevel);
+      const fallback = localFallback();
       return { status: 200, body: { ...fallback, source: 'local_engine' } };
     }
 
@@ -91,7 +99,7 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
     const limit = await checkRateLimit(clientIp);
     if (limit.limited) {
       console.warn('Rate limited:', limit.reason);
-      const fallback = getLocalFallbackResponse(validCounselorId, cleanMessage, heuristicCheck.riskLevel);
+      const fallback = localFallback();
       return { status: 200, body: { ...fallback, source: 'rate_limited' } };
     }
 
@@ -216,7 +224,7 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
     );
 
     // 어떤 오류가 나도 학생의 대화가 끊기지 않도록 내장 응답으로 복구
-    const fallback = getLocalFallbackResponse(validCounselorId, cleanMessage, heuristicCheck.riskLevel);
+    const fallback = localFallback();
     return { status: 200, body: { ...fallback, source: 'fallback_recovery', fallbackReason } };
   }
 }

@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, ShieldAlert, KeyRound, AlertCircle } from 'lucide-react';
-import { verifyPin, checkLockoutStatus, getNextLockStateOnFailure } from '../utils/security';
+import {
+  verifyPin,
+  hashPin,
+  needsRehash,
+  checkLockoutStatus,
+  getNextLockStateOnFailure,
+} from '../utils/security';
 import { AppLockSettings } from '../types';
 
 interface PinLockScreenProps {
@@ -53,9 +59,10 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({
 
       const isValid = await verifyPin(nextPin, lockSettings.pinHash);
       if (isValid) {
-        // Reset failed count on success
+        // Reset failed count on success (이전 형식 해시면 솔트 있는 새 형식으로 교체)
         onUpdateLockSettings({
           ...lockSettings,
+          pinHash: needsRehash(lockSettings.pinHash) ? await hashPin(nextPin) : lockSettings.pinHash,
           failedAttempts: 0,
           lockedUntil: null,
         });

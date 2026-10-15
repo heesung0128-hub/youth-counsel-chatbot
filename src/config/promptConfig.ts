@@ -183,9 +183,21 @@ ${profile.voiceGuide.map((rule) => `- ${rule}`).join('\n')}
 export function getLocalFallbackResponse(
   counselorId: CounselorId,
   userMessage: string,
-  riskLevel: 'safe' | 'concern' | 'crisis'
+  riskLevel: 'safe' | 'concern' | 'crisis',
+  options: { safetyCheck?: boolean } = {}
 ) {
   const profile = COUNSELOR_PROFILES[counselorId] ?? COUNSELOR_PROFILES.cat;
+
+  // 간접 위기 신호: 바로 상담전화 안내 대신 먼저 직접적인 안전 확인 질문
+  if (options.safetyCheck && riskLevel !== 'crisis') {
+    return {
+      message: `${profile.name}는 방금 네 말이 마음에 걸려. 혹시 사라지고 싶다거나 스스로를 해치고 싶은 생각까지 들 때도 있어?`,
+      suggestedKeywords: ['그 정도는 아니야', '사실 가끔 그래', '말하기 어려워'] as [string, string, string],
+      riskLevel: 'concern' as const,
+      shouldOfferReferral: false,
+      safetyCheck: true,
+    };
+  }
 
   if (riskLevel === 'crisis') {
     return {

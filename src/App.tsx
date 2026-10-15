@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CounselorId, ChatMessage, AppLockSettings, RiskLevel } from './types';
-import { COUNSELOR_PROFILES } from './config/promptConfig';
+import { COUNSELOR_PROFILES, getLocalFallbackResponse } from './config/promptConfig';
+import { evaluateConversationRisk } from './utils/conversationRisk';
 import {
   generateAnonymousId,
   generateTransferCode,
@@ -300,20 +301,29 @@ export default function App() {
     } catch (error) {
       console.error('Chat error:', error);
 
-      // Safe local fallback on unexpected network failure
+      // 서버에 닿지 못할 때(오프라인 등): 서버와 같은 대화 흐름 규칙 판단 + 내장 응답
+      const risk = evaluateConversationRisk(text, messages);
+      const fallback = getLocalFallbackResponse(counselor, text, risk.riskLevel, {
+        safetyCheck: risk.needsSafetyCheck,
+      });
+      if (fallback.riskLevel === 'crisis') {
+        setActiveCrisisLevel('crisis');
+      }
+
       const fallbackMsg: ChatMessage = {
         id: `msg-${Date.now()}-counselor-fallback`,
         sender: 'counselor',
-        text: `${COUNSELOR_PROFILES[counselor].name}가 네 곁에서 이야기 잘 듣고 있어. 지금 마음이 많이 복잡하고 지쳤을 텐데, 천천히 깊게 숨을 한번 쉬어볼까? 네 편에서 항상 함께할게.`,
+        text: fallback.message,
         timestamp: Date.now(),
-        riskLevel: clientCheck.riskLevel,
-        suggestedKeywords: ['숨 한번 깊게 쉴게', '마음이 조금 답답해', '이야기 들어줘서 고마워'],
-        isReferralOffer: clientCheck.riskLevel !== 'safe',
-        referralStage: clientCheck.riskLevel === 'crisis' ? 3 : 2,
+        riskLevel: fallback.riskLevel,
+        suggestedKeywords: fallback.suggestedKeywords,
+        isReferralOffer: fallback.shouldOfferReferral,
+        referralStage: 'referralStage' in fallback ? fallback.referralStage : undefined,
+        isSafetyCheck: 'safetyCheck' in fallback && fallback.safetyCheck === true,
       };
 
       setMessages((prev) => [...prev, fallbackMsg]);
-      setSuggestedKeywords(['숨 한번 깊게 쉴게', '마음이 조금 답답해', '이야기 들어줘서 고마워']);
+      setSuggestedKeywords(fallback.suggestedKeywords);
     } finally {
       setIsLoading(false);
     }

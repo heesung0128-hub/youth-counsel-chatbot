@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   hashPin,
   verifyPin,
+  needsRehash,
   generateAnonymousId,
   generateTransferCode,
   validateTransferCode,
@@ -21,6 +22,28 @@ test('hashPin and verifyPin correctly hashes and matches 4-digit PIN', async () 
 
   const isMismatch = await verifyPin('9999', hashed);
   assert.equal(isMismatch, false);
+});
+
+test('hashPin uses a random salt so the same PIN gives different hashes', async () => {
+  const a = await hashPin('1234');
+  const b = await hashPin('1234');
+  assert.match(a, /^pbkdf2-sha256\$200000\$[0-9a-f]{32}\$[0-9a-f]{64}$/);
+  assert.notEqual(a, b);
+  assert.equal(needsRehash(a), false);
+});
+
+test('verifyPin still accepts legacy unsalted SHA-256 hashes and flags them for rehash', async () => {
+  // 이전 버전에서 저장된 '1234'의 SHA-256 값
+  const legacy = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
+  assert.equal(await verifyPin('1234', legacy), true);
+  assert.equal(await verifyPin('0000', legacy), false);
+  assert.equal(needsRehash(legacy), true);
+  assert.equal(needsRehash(null), false);
+});
+
+test('verifyPin rejects malformed stored hashes', async () => {
+  assert.equal(await verifyPin('1234', 'pbkdf2-sha256$abc$$'), false);
+  assert.equal(await verifyPin('1234', ''), false);
 });
 
 test('generateAnonymousId returns valid UUID-like string', () => {
