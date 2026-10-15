@@ -23,7 +23,10 @@ test('system prompt sets 반말 and an off-topic rule', () => {
   const prompt = buildSystemPrompt('cat');
   assert.ok(prompt.includes('다정한 반말'));
   assert.ok(!prompt.includes('해요체'));
-  assert.ok(prompt.includes('[상담과 관계없는 질문 - 주제 이탈 대응]'));
+  assert.ok(prompt.includes('[상담과 관계없는 요청 - 두 가지로 구분]'));
+  for (const header of ['[학생이 원하는 것을 먼저 따르기 - 자율성 존중]', '[마음을 단정하지 않기 - 독심술 금지]', '[상담 대화 단계 - 조언은 순서와 허락을 지키기]', '[학생이 거부하면 조언을 멈추기]', '[같은 조언(전략) 반복 금지]', '[실제 상황을 먼저 확인하기]']) {
+    assert.ok(prompt.includes(header), header);
+  }
   assert.ok(prompt.includes('[답변 길이 - 상황에 맞게 짧게]'));
   assert.ok(prompt.includes('[표현 반복 금지 - 최근 대화 확인]'));
   assert.ok(!prompt.includes('2~4문장'));
