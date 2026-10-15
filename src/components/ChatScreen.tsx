@@ -17,6 +17,7 @@ import {
 import { CounselorId, ChatMessage, RiskLevel } from '../types';
 import { COUNSELOR_PROFILES } from '../config/promptConfig';
 import { EMERGENCY_HOTLINES, CRISIS_MESSAGES } from '../config/crisisConfig';
+import { REFERRAL_CONFIG } from '../config/referralConfig';
 import { CounselorAvatar } from './CounselorAvatar';
 import { PWAInstallButton } from './PWAInstallButton';
 import {
@@ -262,6 +263,17 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
                     <p className="whitespace-pre-wrap">{msg.text}</p>
 
+                    {/* 안전 확인 질문 턴: 큰 연계 카드 대신 조용한 안내 한 줄 */}
+                    {msg.isSafetyCheck && !msg.isReferralOffer && (
+                      <a
+                        href="tel:1388"
+                        className="mt-2.5 pt-2 border-t border-[#F2DE82]/80 flex items-center gap-1.5 text-[11px] text-[#7A6418] hover:text-[#574204]"
+                      >
+                        <Phone className="w-3 h-3 shrink-0" />
+                        <span>대답하기 어렵다면, 청소년상담 1388(24시간)에서 익명으로 이야기할 수 있어.</span>
+                      </a>
+                    )}
+
                     {/* Step 2 / Step 3 Interactive Referral Offer Card */}
                     {msg.isReferralOffer && (
                       <div className="mt-3 pt-2.5 border-t border-[#F2DE82]/80 flex flex-col gap-2">
@@ -276,7 +288,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                         <p className="text-xs text-[#6B5512] leading-snug">
                           {msg.referralStage === 3
                             ? '혼자 버티기 힘들 때는 학교와 서초구 전문 센터의 지지망을 연결할 수 있어요.'
-                            : 'AI 챗봇 외에, 실제 사람 전문 상담사와 비밀 보장 익명 채팅으로 이야기해볼 수 있어요.'}
+                            : REFERRAL_CONFIG.stage2.status === 'active'
+                              ? 'AI 챗봇 외에, 실제 사람 전문 상담사와 비밀 보장 익명 채팅으로 이야기해볼 수 있어요.'
+                              : '실제 상담 선생님과 이야기하고 싶다면, 청소년상담 1388(전화·문자·카카오톡)에서 익명으로 상담할 수 있어요.'}
                         </p>
                         <button
                           type="button"

@@ -293,6 +293,7 @@ export default function App() {
         suggestedKeywords: data.suggestedKeywords,
         isReferralOffer: data.shouldOfferReferral,
         referralStage: data.referralStage || (finalRisk === 'crisis' ? 3 : 2),
+        isSafetyCheck: data.safetyCheck === true && finalRisk !== 'crisis',
       };
 
       setMessages((prev) => [...prev, counselorMsg]);
@@ -303,7 +304,7 @@ export default function App() {
       const fallbackMsg: ChatMessage = {
         id: `msg-${Date.now()}-counselor-fallback`,
         sender: 'counselor',
-        text: `${COUNSELOR_PROFILES[counselor].name}이 네 곁에서 이야기 잘 듣고 있어. 지금 마음이 많이 복잡하고 지쳤을 텐데, 천천히 깊게 숨을 한번 쉬어볼까? 네 편에서 항상 함께할게.`,
+        text: `${COUNSELOR_PROFILES[counselor].name}가 네 곁에서 이야기 잘 듣고 있어. 지금 마음이 많이 복잡하고 지쳤을 텐데, 천천히 깊게 숨을 한번 쉬어볼까? 네 편에서 항상 함께할게.`,
         timestamp: Date.now(),
         riskLevel: clientCheck.riskLevel,
         suggestedKeywords: ['숨 한번 깊게 쉴게', '마음이 조금 답답해', '이야기 들어줘서 고마워'],

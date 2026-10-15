@@ -37798,6 +37798,10 @@ async function getRateLimitStatus() {
   }
 }
 
+// server/responsePolicy.ts
+var EMOJI = new RegExp("\\p{Extended_Pictographic}\uFE0F?", "gu");
+var HAS_EMOJI = new RegExp("\\p{Extended_Pictographic}", "u");
+
 // server/geminiConfig.ts
 var DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite";
 function getGeminiModel() {

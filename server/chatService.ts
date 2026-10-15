@@ -11,6 +11,7 @@ import {
 import { CounselorId } from '../src/types';
 import { evaluateCrisisSignals } from '../src/utils/crisisDetector';
 import { checkRateLimit, getRateLimitStatus } from './rateLimit';
+import { avoidConsecutiveEmoji, resolveSafetyCheck } from './responsePolicy';
 import {
   classifyGeminiError,
   EmptyResponseError,
@@ -154,6 +155,10 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
               type: Type.INTEGER,
               description: '연계 단계 (2: 비대면 익명 상담사, 3: Wee클래스 및 전문기관)',
             },
+            safetyCheck: {
+              type: Type.BOOLEAN,
+              description: '간접적인 위기 신호에 대해 안전 확인 질문을 한 답변이면 true',
+            },
           },
           required: ['message', 'suggestedKeywords', 'riskLevel'],
         },
@@ -180,15 +185,23 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
     // 모델이 더 낮게 판단해도 규칙 기반 판정(concern/crisis)보다 낮아지지 않게 함
     const finalRiskLevel = maxRisk(parsedData.riskLevel, heuristicCheck.riskLevel);
 
+    // 위기 키워드가 있으면 확인 질문 없이 즉시 안내, 간접 신호면 확인 질문 턴으로 처리
+    const { safetyCheck, shouldOfferReferral } = resolveSafetyCheck({
+      finalRiskLevel,
+      heuristicRiskLevel: heuristicCheck.riskLevel,
+      modelSafetyCheck: parsedData.safetyCheck,
+      modelOfferReferral: parsedData.shouldOfferReferral,
+    });
+
     return {
       status: 200,
       body: {
-        message: parsedData.message,
+        message: avoidConsecutiveEmoji(String(parsedData.message || ''), conversationHistory),
         suggestedKeywords: keywords,
         riskLevel: finalRiskLevel,
         counselorNote: parsedData.counselorNote || '',
-        shouldOfferReferral:
-          finalRiskLevel === 'crisis' || (parsedData.shouldOfferReferral ?? finalRiskLevel === 'concern'),
+        shouldOfferReferral,
+        safetyCheck,
         referralStage: parsedData.referralStage || (finalRiskLevel === 'crisis' ? 3 : 2),
         source: 'gemini',
       },

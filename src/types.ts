@@ -28,6 +28,8 @@ export interface ChatMessage {
   suggestedKeywords?: [string, string, string];
   isReferralOffer?: boolean;
   referralStage?: 2 | 3;
+  /** 간접 위기 신호에 대한 안전 확인 질문 답변 (연계 카드 대신 작은 1388 안내 표시) */
+  isSafetyCheck?: boolean;
 }
 
 export interface AppLockSettings {
