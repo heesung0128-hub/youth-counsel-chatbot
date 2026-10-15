@@ -11,9 +11,15 @@ import {
 import { CounselorId } from '../src/types';
 import { evaluateCrisisSignals } from '../src/utils/crisisDetector';
 import { checkRateLimit, getRateLimitStatus } from './rateLimit';
+import {
+  classifyGeminiError,
+  EmptyResponseError,
+  getGeminiModel,
+  getThinkingLevel,
+  getTimeoutMs,
+} from './geminiConfig';
 
 const MAX_MESSAGE_LENGTH = 1000;
-const GEMINI_MODEL = () => process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 const MAX_HISTORY_TURNS = 8;
 const RISK_ORDER = { safe: 0, concern: 1, crisis: 2 } as const;
 type RiskLevel = keyof typeof RISK_ORDER;
@@ -46,7 +52,8 @@ export async function getHealth(): Promise<ServiceResult> {
     body: {
       status: 'ok',
       hasApiKey: !!process.env.GEMINI_API_KEY,
-      model: GEMINI_MODEL(),
+      model: getGeminiModel(),
+      thinkingLevel: getThinkingLevel(),
       rateLimit: await getRateLimitStatus(),
       timestamp: new Date().toISOString(),
     },
@@ -104,7 +111,7 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
 답변 시 선생님이 아닌 다정하고 든든한 친구 '${profile.name}'의 어조를 자연스럽게 유지하세요.`;
 
     const response = await client.models.generateContent({
-      model: GEMINI_MODEL(),
+      model: getGeminiModel(),
       contents: [
         ...recentHistory,
         {
@@ -119,6 +126,8 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
       ],
       config: {
         systemInstruction: dynamicSystemPrompt,
+        thinkingConfig: { thinkingLevel: getThinkingLevel() },
+        abortSignal: AbortSignal.timeout(getTimeoutMs()),
         responseMimeType: 'application/json',
         responseSchema: {
           type: Type.OBJECT,
@@ -157,7 +166,7 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
 
     const responseText = response.text;
     if (!responseText) {
-      throw new Error('Empty response from model');
+      throw new EmptyResponseError('Empty response from model');
     }
 
     const parsedData = JSON.parse(responseText);
@@ -189,10 +198,16 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
       },
     };
   } catch (error) {
-    console.error('Error in /api/chat:', error);
+    // 실패 사유를 분류해 로그(Vercel Logs)와 응답(fallbackReason)에 남김. 학생 메시지 내용은 기록하지 않음
+    const fallbackReason = classifyGeminiError(error);
+    const status = (error as { status?: unknown } | null)?.status;
+    console.error(
+      `[gemini_fallback] reason=${fallbackReason} model=${getGeminiModel()} status=${status ?? '-'}`,
+      error instanceof Error ? error.message.slice(0, 500) : error
+    );
 
     // 어떤 오류가 나도 학생의 대화가 끊기지 않도록 내장 응답으로 복구
     const fallback = getLocalFallbackResponse(validCounselorId, cleanMessage, heuristicCheck.riskLevel);
-    return { status: 200, body: { ...fallback, source: 'fallback_recovery' } };
+    return { status: 200, body: { ...fallback, source: 'fallback_recovery', fallbackReason } };
   }
 }

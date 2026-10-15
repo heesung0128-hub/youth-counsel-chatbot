@@ -9,7 +9,8 @@
  * 환경변수 (Vercel Marketplace의 Upstash 연동 시 자동 주입):
  *   KV_REST_API_URL / KV_REST_API_TOKEN  (또는 UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN)
  * 선택 환경변수 (숫자):
- *   RATE_LIMIT_PER_MIN (기본 20), RATE_LIMIT_PER_DAY (기본 300), RATE_LIMIT_GLOBAL_PER_DAY (기본 1000)
+ *   RATE_LIMIT_PER_MIN (기본 20), RATE_LIMIT_PER_DAY (기본 300), RATE_LIMIT_GLOBAL_PER_DAY (기본 450)
+ *   ※ 전체 일일 한도는 Gemini 무료 일일 한도(gemini-3.5-flash-lite 약 500회)보다 낮게 유지하세요.
  *
  * 참고: 학교 Wi-Fi는 여러 학생이 같은 IP를 공유하므로 IP별 한도를 너무 낮게 잡지 마세요.
  */
@@ -62,7 +63,7 @@ export function getLimiters(): Limiters | null {
   cached = {
     perMin: make(numEnv('RATE_LIMIT_PER_MIN', 20), '1 m', 'min'),
     perDay: make(numEnv('RATE_LIMIT_PER_DAY', 300), '1 d', 'day'),
-    global: make(numEnv('RATE_LIMIT_GLOBAL_PER_DAY', 1000), '1 d', 'global'),
+    global: make(numEnv('RATE_LIMIT_GLOBAL_PER_DAY', 450), '1 d', 'global'),
   };
   return cached;
 }

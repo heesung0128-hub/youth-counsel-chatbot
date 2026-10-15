@@ -54384,7 +54384,7 @@ function getLimiters() {
   cached = {
     perMin: make(numEnv("RATE_LIMIT_PER_MIN", 20), "1 m", "min"),
     perDay: make(numEnv("RATE_LIMIT_PER_DAY", 300), "1 d", "day"),
-    global: make(numEnv("RATE_LIMIT_GLOBAL_PER_DAY", 1e3), "1 d", "global")
+    global: make(numEnv("RATE_LIMIT_GLOBAL_PER_DAY", 450), "1 d", "global")
   };
   return cached;
 }
@@ -54413,9 +54413,51 @@ function getClientIp(headers = {}) {
   return pick(headers["x-real-ip"])?.trim() || "unknown";
 }
 
+// server/geminiConfig.ts
+var DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite";
+function getGeminiModel() {
+  return process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
+}
+function getThinkingLevel() {
+  const raw = (process.env.GEMINI_THINKING_LEVEL || "").trim().toUpperCase();
+  switch (raw) {
+    case "MINIMAL":
+      return ThinkingLevel.MINIMAL;
+    case "MEDIUM":
+      return ThinkingLevel.MEDIUM;
+    case "HIGH":
+      return ThinkingLevel.HIGH;
+    default:
+      return ThinkingLevel.LOW;
+  }
+}
+function getTimeoutMs() {
+  const n = Number(process.env.GEMINI_TIMEOUT_MS);
+  return Number.isFinite(n) && n >= 1e3 ? Math.floor(n) : 2e4;
+}
+var EmptyResponseError = class extends Error {
+};
+function classifyGeminiError(error) {
+  if (error instanceof EmptyResponseError) return "empty_response";
+  if (error instanceof SyntaxError) return "parse_error";
+  const err = error;
+  if (err?.name === "AbortError" || err?.name === "TimeoutError") return "timeout";
+  const status = typeof err?.status === "number" ? err.status : void 0;
+  const message = typeof err?.message === "string" ? err.message : "";
+  if (/API key (not valid|expired)|API_KEY_INVALID/i.test(message)) return "auth_error";
+  if (status === 429) return "quota_exceeded";
+  if (status === 401 || status === 403) return "auth_error";
+  if (status === 404) return "model_not_found";
+  if (status === 400) return "invalid_request";
+  if (status !== void 0 && status >= 500) return "model_overloaded";
+  if (/RESOURCE_EXHAUSTED|quota/i.test(message)) return "quota_exceeded";
+  if (/UNAVAILABLE|overloaded/i.test(message)) return "model_overloaded";
+  if (/aborted|timed? ?out/i.test(message)) return "timeout";
+  return "unknown";
+}
+
 // server/chatService.ts
 var MAX_MESSAGE_LENGTH = 1e3;
-var GEMINI_MODEL = () => process.env.GEMINI_MODEL || "gemini-3.6-flash";
 var MAX_HISTORY_TURNS = 8;
 var RISK_ORDER = { safe: 0, concern: 1, crisis: 2 };
 function maxRisk(a, b) {
@@ -54461,7 +54503,7 @@ async function processChat(rawBody, clientIp = "unknown") {
 \uAE30\uBCF8 \uC2AC\uB85C\uAC74: "${profile.tagline}"
 \uB2F5\uBCC0 \uC2DC \uC120\uC0DD\uB2D8\uC774 \uC544\uB2CC \uB2E4\uC815\uD558\uACE0 \uB4E0\uB4E0\uD55C \uCE5C\uAD6C '${profile.name}'\uC758 \uC5B4\uC870\uB97C \uC790\uC5F0\uC2A4\uB7FD\uAC8C \uC720\uC9C0\uD558\uC138\uC694.`;
     const response = await client.models.generateContent({
-      model: GEMINI_MODEL(),
+      model: getGeminiModel(),
       contents: [
         ...recentHistory,
         {
@@ -54476,6 +54518,8 @@ async function processChat(rawBody, clientIp = "unknown") {
       ],
       config: {
         systemInstruction: dynamicSystemPrompt,
+        thinkingConfig: { thinkingLevel: getThinkingLevel() },
+        abortSignal: AbortSignal.timeout(getTimeoutMs()),
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -54513,7 +54557,7 @@ async function processChat(rawBody, clientIp = "unknown") {
     });
     const responseText = response.text;
     if (!responseText) {
-      throw new Error("Empty response from model");
+      throw new EmptyResponseError("Empty response from model");
     }
     const parsedData = JSON.parse(responseText);
     let keywords = profile.defaultKeywords;
@@ -54538,9 +54582,14 @@ async function processChat(rawBody, clientIp = "unknown") {
       }
     };
   } catch (error) {
-    console.error("Error in /api/chat:", error);
+    const fallbackReason = classifyGeminiError(error);
+    const status = error?.status;
+    console.error(
+      `[gemini_fallback] reason=${fallbackReason} model=${getGeminiModel()} status=${status ?? "-"}`,
+      error instanceof Error ? error.message.slice(0, 500) : error
+    );
     const fallback = getLocalFallbackResponse(validCounselorId, cleanMessage, heuristicCheck.riskLevel);
-    return { status: 200, body: { ...fallback, source: "fallback_recovery" } };
+    return { status: 200, body: { ...fallback, source: "fallback_recovery", fallbackReason } };
   }
 }
 

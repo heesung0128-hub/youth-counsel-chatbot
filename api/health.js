@@ -37784,7 +37784,7 @@ function getLimiters() {
   cached = {
     perMin: make(numEnv("RATE_LIMIT_PER_MIN", 20), "1 m", "min"),
     perDay: make(numEnv("RATE_LIMIT_PER_DAY", 300), "1 d", "day"),
-    global: make(numEnv("RATE_LIMIT_GLOBAL_PER_DAY", 1e3), "1 d", "global")
+    global: make(numEnv("RATE_LIMIT_GLOBAL_PER_DAY", 450), "1 d", "global")
   };
   return cached;
 }
@@ -37798,15 +37798,34 @@ async function getRateLimitStatus() {
   }
 }
 
+// server/geminiConfig.ts
+var DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite";
+function getGeminiModel() {
+  return process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
+}
+function getThinkingLevel() {
+  const raw = (process.env.GEMINI_THINKING_LEVEL || "").trim().toUpperCase();
+  switch (raw) {
+    case "MINIMAL":
+      return ThinkingLevel.MINIMAL;
+    case "MEDIUM":
+      return ThinkingLevel.MEDIUM;
+    case "HIGH":
+      return ThinkingLevel.HIGH;
+    default:
+      return ThinkingLevel.LOW;
+  }
+}
+
 // server/chatService.ts
-var GEMINI_MODEL = () => process.env.GEMINI_MODEL || "gemini-3.6-flash";
 async function getHealth() {
   return {
     status: 200,
     body: {
       status: "ok",
       hasApiKey: !!process.env.GEMINI_API_KEY,
-      model: GEMINI_MODEL(),
+      model: getGeminiModel(),
+      thinkingLevel: getThinkingLevel(),
       rateLimit: await getRateLimitStatus(),
       timestamp: (/* @__PURE__ */ new Date()).toISOString()
     }
