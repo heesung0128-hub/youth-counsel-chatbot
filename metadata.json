@@ -1,0 +1,6 @@
+{
+  "name": "서초 청소년 마음상담 챗봇",
+  "description": "동덕여고 학생 연구 기반 서초구 청소년을 위한 비대면·익명 AI 초기 상담 챗봇 '마음 토닥'",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

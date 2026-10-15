@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="skyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#D9F2FD"/>
+      <stop offset="50%" stop-color="#BFE6F7"/>
+      <stop offset="100%" stop-color="#9ADAF5"/>
+    </linearGradient>
+    <linearGradient id="warmGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF8D6"/>
+      <stop offset="100%" stop-color="#FFE79A"/>
+    </linearGradient>
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#5B9BB8" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <!-- Background Rounded Canvas -->
+  <rect width="512" height="512" rx="128" fill="url(#skyGrad)"/>
+
+  <!-- Warm Cloud Base -->
+  <g filter="url(#softShadow)">
+    <path d="M160 360 C120 360 90 330 90 290 C90 255 115 228 150 222 C165 175 210 140 265 140 C325 140 375 182 385 240 C418 245 442 272 442 305 C442 342 412 360 375 360 Z" fill="#FFFFFF" opacity="0.95"/>
+  </g>
+
+  <!-- Friendly Cat & Dog silhouette / Heart Motif -->
+  <!-- Pastel Heart -->
+  <path d="M256 325 C256 325 180 270 180 215 C180 185 204 165 232 165 C248 165 256 175 256 175 C256 175 264 165 280 165 C308 165 332 185 332 215 C332 270 256 325 256 325 Z" fill="url(#warmGrad)"/>
+  
+  <!-- Subtle Friendly Face in Heart -->
+  <circle cx="236" cy="210" r="5" fill="#5A4E38"/>
+  <circle cx="276" cy="210" r="5" fill="#5A4E38"/>
+  <path d="M250 220 Q256 226 262 220" stroke="#5A4E38" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <!-- Rosy cheeks -->
+  <ellipse cx="225" cy="218" rx="6" ry="3.5" fill="#FFAAA6" opacity="0.6"/>
+  <ellipse cx="287" cy="218" rx="6" ry="3.5" fill="#FFAAA6" opacity="0.6"/>
+
+  <!-- Little sprouting sprout on top (growth & hope) -->
+  <path d="M256 155 Q256 130 272 125 Q278 140 256 150" fill="#78D68E"/>
+  <path d="M256 155 Q256 135 242 130 Q238 144 256 150" fill="#9BE5AC"/>
+</svg>
