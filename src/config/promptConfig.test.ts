@@ -24,6 +24,9 @@ test('system prompt sets 반말 and an off-topic rule', () => {
   assert.ok(prompt.includes('다정한 반말'));
   assert.ok(!prompt.includes('해요체'));
   assert.ok(prompt.includes('[상담과 관계없는 질문 - 주제 이탈 대응]'));
+  assert.ok(prompt.includes('[답변 길이 - 상황에 맞게 짧게]'));
+  assert.ok(prompt.includes('[표현 반복 금지 - 최근 대화 확인]'));
+  assert.ok(!prompt.includes('2~4문장'));
 });
 
 test('character sample lines and greetings use 반말', () => {
