@@ -26,6 +26,8 @@ test('resting advice without checking the situation is flagged', () => {
   // 실제 배포 응답: 질문형이지만 상황 확인 없이 눕기를 권함
   assert.ok(run(check, '피곤할 땐 아무것도 안 하고 푹 쉬는 게 최고야. 따뜻한 물로 씻고 가볍게 누워 볼래?'));
   assert.equal(run(check, '지금 잠깐 누워서 쉴 수 있는 상황이야?'), null);
+  // 실제 배포 응답 (LOW): 말줄임표로 끝나는 조언도 조언으로 판정
+  assert.ok(isAdvice('그럼 지금은 아무것도 생각하지 말고 조금만 눈을 붙여 볼까… 냥이가 곁에 있을게. 🌙'));
 });
 
 test('refusing a fun-story request with the homework line is flagged (실제 배포 응답)', () => {
@@ -46,6 +48,8 @@ test('complying with a fun-story request passes (응답 11~14)', () => {
 test('accepting a correction passes, repeating the interpretation fails', () => {
   const check = checks.acceptsCorrection();
   assert.equal(run(check, '내가 잘못 이해했네, 웃고 싶었구나! 그럼 몽이 바나나 실수담 들려줄게.'), null);
+  // 실제 배포 응답 (LOW): 정정을 받아들임
+  assert.equal(run(check, '아, 위로보다 그냥 빵 터지고 싶었구나. 바나나를 껍질째 씹어 먹으려다 깜짝 놀란 원숭이 이야기라도 해줄까? 🍌'), null);
   assert.ok(run(check, '그래도 사실은 위로가 필요한 것 같아.'));
 });
 

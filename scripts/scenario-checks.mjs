@@ -3,13 +3,13 @@
 // 대처 방법(조언) 종류: 같은 종류를 다시 권하면 "같은 조언 반복"
 export const STRATEGIES = {
   호흡: /숨[을 ]*(고르|골라|쉬|크게|들이)|심호흡|호흡/,
-  쉬기: /푹 ?쉬|쉬어 ?(보|볼)|누워|잠[을 ]*(자|청)|휴식/,
+  쉬기: /푹 ?쉬|쉬어 ?(보|볼)|누워|잠[을 ]*(자|청)|눈[을 ]*붙|휴식/,
   나눠하기: /하나만|하나씩|먼저 (끝내|해|골라)|조금씩 나눠/,
   산책: /산책|바람[을 ]*쐬/,
   적기: /적어 ?(보|볼)|목록|메모/,
   물마시기: /물 ?한 ?잔|따뜻한 (물|음료|차)/,
 };
-export const ADVICE_ENDING = /(볼까\?|보자|해 ?봐|볼래\?|하는 건 어때|하면 좋겠)/;
+export const ADVICE_ENDING = /(볼까[?…]|볼까\.\.\.|보자|해 ?봐|볼래[?…]|하는 건 어때|하면 좋겠)/;
 // 학생 마음을 단정하는 해석
 export const MIND_READING = /(상태가 아닐|(했던|싶었던|였던|웠던|있었던) (건|거) (아닐까|아니야|아냐)|어려울 수도 있을 것 같아|사실은 [^.?!]*(거지|거야|잖아)\?|보다는 [^.?!]*(필요|원했)|(위로|쉬는 게|휴식이) 필요한 (것|거) 같아)/;
 // 요청을 돌려서 거절하는 표현
@@ -28,7 +28,7 @@ export const isAdvice = (text) => strategiesIn(text).length > 0 && (ADVICE_ENDIN
 export const checks = {
   noAdvice: (why) => (r) => (isAdvice(r.message) ? `조언(${strategiesIn(r.message).join('·')})을 너무 일찍/거부 후에 함 — ${why}` : null),
   noRestWithoutCheck: () => (r) =>
-    /푹 ?쉬|누워|잠[을 ]*(자|청)/.test(r.message) && isAdvice(r.message) && !SITUATION_CHECK.test(r.message)
+    /푹 ?쉬|누워|잠[을 ]*(자|청)|눈[을 ]*붙/.test(r.message) && isAdvice(r.message) && !SITUATION_CHECK.test(r.message)
       ? '실제 상황 확인 없이 쉬기·눕기를 권함'
       : null,
   noRepeatStrategy: () => (r, ctx) => {
@@ -39,7 +39,7 @@ export const checks = {
   complies: () => (r) =>
     DEFLECT.test(r.message) || MIND_READING.test(r.message) ? '요청을 거절하거나 다른 데로 돌림' : null,
   acceptsCorrection: () => (r) =>
-    /(잘못|그랬구나|그렇구나|웃|알겠|좋아)/.test(r.message) && !MIND_READING.test(r.message)
+    /(잘못|그랬구나|그렇구나|싶었구나|웃|알겠|좋아)/.test(r.message) && !MIND_READING.test(r.message)
       ? null
       : '정정을 바로 받아들이지 않음',
   noAnswerLeak: (re) => (r) => (re.test(r.message) ? '숙제·지식 질문의 정답을 알려 줌' : null),
