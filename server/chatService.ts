@@ -2,7 +2,6 @@
  * 채팅 API 공용 로직.
  * Express 서버(server.ts)와 Vercel 서버리스 함수(server/vercel/*.ts)가 함께 사용합니다.
  */
-import { GoogleGenAI, Type } from '@google/genai';
 import {
   buildSystemPrompt,
   COUNSELOR_PROFILES,
@@ -13,14 +12,8 @@ import { evaluateCrisisSignals } from '../src/utils/crisisDetector';
 import { evaluateConversationRisk } from '../src/utils/conversationRisk';
 import { checkRateLimit, getRateLimitStatus } from './rateLimit';
 import { avoidConsecutiveEmoji, chooseCrisisSafeMessage, resolveSafetyCheck } from './responsePolicy';
-import {
-  classifyGeminiError,
-  EmptyResponseError,
-  getGeminiModel,
-  getThinkingLevel,
-  getTimeoutMs,
-  withOverloadRetry,
-} from './geminiConfig';
+import { classifyGeminiError, getThinkingLevel, getTimeoutMs, withOverloadRetry } from './geminiConfig';
+import { generateReply, getProviderInfo, type ChatTurn } from './aiProvider';
 
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_HISTORY_TURNS = 8;
@@ -38,25 +31,15 @@ function maxRisk(a: unknown, b: RiskLevel): RiskLevel {
   return RISK_ORDER[modelRisk] >= RISK_ORDER[b] ? modelRisk : b;
 }
 
-// 서버리스 환경에서도 재사용되도록 지연 초기화 (API 키는 서버 환경변수에서만 읽음)
-let aiClient: GoogleGenAI | null | undefined;
-function getClient(): GoogleGenAI | null {
-  if (aiClient !== undefined) return aiClient;
-  const apiKey = process.env.GEMINI_API_KEY;
-  aiClient = apiKey
-    ? new GoogleGenAI({ apiKey, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } })
-    : null;
-  return aiClient;
-}
-
 export async function getHealth(): Promise<ServiceResult> {
   return {
     status: 200,
     body: {
       status: 'ok',
-      hasApiKey: !!process.env.GEMINI_API_KEY,
-      model: getGeminiModel(),
-      thinkingLevel: getThinkingLevel(),
+      provider: getProviderInfo().name,
+      hasApiKey: getProviderInfo().configured,
+      model: getProviderInfo().model,
+      thinkingLevel: getProviderInfo().name === 'gemini' ? getThinkingLevel() : undefined,
       rateLimit: await getRateLimitStatus(),
       timestamp: new Date().toISOString(),
     },
@@ -88,10 +71,10 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
     });
 
   try {
-    const client = getClient();
+    const provider = getProviderInfo();
 
-    // API 키가 없으면 내장 응답 엔진 사용
-    if (!client) {
+    // AI 연결 정보가 없으면 내장 응답 엔진 사용
+    if (!provider.configured) {
       const fallback = localFallback();
       return { status: 200, body: { ...fallback, source: 'local_engine' } };
     }
@@ -104,81 +87,30 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
       return { status: 200, body: { ...fallback, source: 'rate_limited' } };
     }
 
-    // 2. Gemini 호출 (GEMINI_MODEL 환경변수로 모델 변경 가능)
+    // 2. AI 호출 (AI_PROVIDER 환경변수로 제공자 선택)
     const profile = COUNSELOR_PROFILES[validCounselorId];
 
-    const recentHistory = Array.isArray(conversationHistory)
+    const recentHistory: ChatTurn[] = Array.isArray(conversationHistory)
       ? conversationHistory.slice(-MAX_HISTORY_TURNS).map((m: any) => ({
-          role: m?.sender === 'user' ? 'user' : 'model',
-          parts: [{ text: String(m?.text || '').slice(0, MAX_MESSAGE_LENGTH) }],
+          role: m?.sender === 'user' ? 'user' : 'assistant',
+          text: String(m?.text || '').slice(0, MAX_MESSAGE_LENGTH),
         }))
       : [];
 
     const dynamicSystemPrompt = buildSystemPrompt(validCounselorId);
 
-    // 구글 과부하(503) 때는 한 번 재시도 (같은 제한 시간 안에서)
-    const response = await withOverloadRetry((signal) => client.models.generateContent({
-      model: getGeminiModel(),
-      contents: [
-        ...recentHistory,
-        {
-          role: 'user',
-          parts: [
-            {
-              text: `학생의 메시지: "${cleanMessage}"
+    // 서버 과부하(5xx) 때는 한 번 재시도 (같은 제한 시간 안에서)
+    const responseText = await withOverloadRetry(
+      (signal) =>
+        generateReply({
+          system: dynamicSystemPrompt,
+          history: recentHistory,
+          userText: `학생의 메시지: "${cleanMessage}"
 이 학생의 고민을 경청하고 차분하게 마음을 정리할 수 있도록 응답을 JSON 형식으로 작성해 줘.`,
-            },
-          ],
-        },
-      ],
-      config: {
-        systemInstruction: dynamicSystemPrompt,
-        thinkingConfig: { thinkingLevel: getThinkingLevel() },
-        abortSignal: signal,
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            message: {
-              type: Type.STRING,
-              description: '학생에게 전할 따뜻하고 차분한 상담사의 응답',
-            },
-            suggestedKeywords: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-              description: '학생이 바로 누를 수 있는 대화 맥락 맞춤형 다음 추천 키워드 정확히 3개',
-            },
-            riskLevel: {
-              type: Type.STRING,
-              enum: ['safe', 'concern', 'crisis'],
-              description: '학생의 심리적 위기 수준 판단',
-            },
-            counselorNote: {
-              type: Type.STRING,
-              description: '상담 메모 (선택)',
-            },
-            shouldOfferReferral: {
-              type: Type.BOOLEAN,
-              description: '실제 상담사 또는 전문기관 연계 제안 카드를 표시할지 여부',
-            },
-            referralStage: {
-              type: Type.INTEGER,
-              description: '연계 단계 (2: 비대면 익명 상담사, 3: Wee클래스 및 전문기관)',
-            },
-            safetyCheck: {
-              type: Type.BOOLEAN,
-              description: '간접적인 위기 신호에 대해 안전 확인 질문을 한 답변이면 true',
-            },
-          },
-          required: ['message', 'suggestedKeywords', 'riskLevel'],
-        },
-      },
-    }), { timeoutMs: getTimeoutMs() });
-
-    const responseText = response.text;
-    if (!responseText) {
-      throw new EmptyResponseError('Empty response from model');
-    }
+          signal,
+        }),
+      { timeoutMs: getTimeoutMs() }
+    );
 
     const parsedData = JSON.parse(responseText);
 
@@ -227,7 +159,7 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
         shouldOfferReferral,
         safetyCheck,
         referralStage: finalRiskLevel === 'crisis' ? 3 : parsedData.referralStage || 2,
-        source: overridden ? 'gemini_rule_crisis' : 'gemini',
+        source: overridden ? `${provider.name}_rule_crisis` : provider.name,
       },
     };
   } catch (error) {
@@ -235,7 +167,7 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
     const fallbackReason = classifyGeminiError(error);
     const status = (error as { status?: unknown } | null)?.status;
     console.error(
-      `[gemini_fallback] reason=${fallbackReason} model=${getGeminiModel()} status=${status ?? '-'}`,
+      `[ai_fallback] provider=${getProviderInfo().name} reason=${fallbackReason} model=${getProviderInfo().model} status=${status ?? '-'}`,
       error instanceof Error ? error.message.slice(0, 500) : error
     );
 

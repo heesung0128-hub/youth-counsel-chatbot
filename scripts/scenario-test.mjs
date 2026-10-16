@@ -58,7 +58,7 @@ async function send(counselorId, userMessage, history) {
 }
 
 const health = await (await fetch(`${BASE}/api/health`)).json().catch(() => ({}));
-console.log(`대상: ${BASE}  모델: ${health.model ?? '?'}  생각 단계: ${health.thinkingLevel ?? '?'}\n`);
+console.log(`대상: ${BASE}  제공자: ${health.provider ?? 'gemini'}  모델: ${health.model ?? '?'}  생각 단계: ${health.thinkingLevel ?? '?'}\n`);
 
 for (const scenario of SCENARIOS.filter((s) => !ONLY.length || ONLY.includes(s.id))) {
   for (const counselorId of CHARACTERS) {
@@ -68,8 +68,8 @@ for (const scenario of SCENARIOS.filter((s) => !ONLY.length || ONLY.includes(s.i
     for (const [userMessage, turnChecks] of scenario.turns) {
       const r = await send(counselorId, userMessage, history);
       const issues = [...turnChecks, checks.banmal()].map((c) => c(r, ctx)).filter(Boolean);
-      if (r.source !== 'gemini' && r.source !== 'gemini_rule_crisis') {
-        issues.push(`Gemini가 아닌 응답(source=${r.source}${r.fallbackReason ? '/' + r.fallbackReason : ''}) — 판정 제외 권장`);
+      if (['local_engine', 'fallback_recovery', 'rate_limited'].includes(r.source)) {
+        issues.push(`AI가 아닌 내장 응답(source=${r.source}${r.fallbackReason ? '/' + r.fallbackReason : ''}) — 판정 제외 권장`);
       }
       if (isAdvice(r.message)) strategiesIn(r.message).forEach((s) => ctx.usedStrategies.add(s));
       results.push({ scenario: scenario.id, counselorId, userMessage, ...r, issues });
@@ -85,7 +85,7 @@ for (const scenario of SCENARIOS.filter((s) => !ONLY.length || ONLY.includes(s.i
 // ---------- 요약·저장 ----------
 const flagged = results.filter((r) => r.issues.length);
 const avgLatency = results.reduce((a, r) => a + r.latency, 0) / Math.max(results.length, 1);
-const summary = `턴 ${results.length}개 중 의심 표시 ${flagged.length}개, 평균 응답 ${avgLatency.toFixed(1)}초 (모델 ${health.model ?? '?'}, 생각 단계 ${health.thinkingLevel ?? '?'})`;
+const summary = `턴 ${results.length}개 중 의심 표시 ${flagged.length}개, 평균 응답 ${avgLatency.toFixed(1)}초 (제공자 ${health.provider ?? 'gemini'}, 모델 ${health.model ?? '?'}, 생각 단계 ${health.thinkingLevel ?? '-'})`;
 console.log(`요약: ${summary}`);
 
 const outDir = path.join(__dirname, 'scenario-results');
