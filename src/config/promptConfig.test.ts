@@ -68,6 +68,20 @@ test('each character has a calm crisis message with 1388 and 109 in 반말', () 
   }
 });
 
+test('violence or abuse crisis points to 112·117·1388, not only 109', () => {
+  const prompt = buildSystemPrompt('cat');
+  assert.ok(prompt.includes('학교폭력 신고 117'));
+  for (const id of IDS) {
+    const msg = getLocalFallbackResponse(id, '아빠한테 맞았어', 'crisis').message;
+    assert.equal(msg, COUNSELOR_PROFILES[id].violenceCrisisMessage);
+    assert.ok(msg.includes('112') && msg.includes('117') && msg.includes('1388'), id);
+    assert.ok(!msg.includes('109'), id);
+    for (const sentence of msg.split(/(?<=[.?!])s+/)) assert.doesNotMatch(sentence, POLITE_ENDING, id);
+    // 자해 신호가 함께 있으면 기존 안내(109 포함) 유지
+    assert.equal(getLocalFallbackResponse(id, '맞았고 죽고 싶어', 'crisis').message, COUNSELOR_PROFILES[id].crisisMessage);
+  }
+});
+
 test('prompt tells the model to tell the story right away instead of offering it', () => {
   const prompt = buildSystemPrompt('dog');
   assert.ok(prompt.includes('[바로 응하기]'));
@@ -86,6 +100,6 @@ test('prompt has no concrete example stories that models tend to copy', () => {
 test('[바로 응하기] shows a format-only good example and the rest-check rule', () => {
   const prompt = buildSystemPrompt('cat');
   assert.ok(prompt.includes('좋은 예(형식만)'));
-  assert.ok(prompt.includes('해 주겠다고만 하고 이야기 내용이 없음'));
+  assert.ok(prompt.includes('제안만 하고 이야기가 없음'));
   assert.ok(prompt.includes('"지금 쉴 수 있는 상황이야?"'));
 });

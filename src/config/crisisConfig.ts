@@ -64,6 +64,9 @@ export const CRISIS_MESSAGES = {
  * 클라이언트 측 독립 위기 키워드 감지 사전
  * LLM API 장애나 오프라인 상황에서도 즉각 작동하도록 클라이언트에서 1차 검사합니다.
  */
+/** 위기 키워드 중 폭력·학대 피해 신호 (자살예방 109 대신 112·117·1388 안내) */
+export const VIOLENCE_KEYWORDS = ['때렸', '맞았', '학대', '폭행', '가정폭력', '성폭력', '괴롭힘'];
+
 export const CRISIS_KEYWORDS = [
   '죽고싶',
   '죽고 싶',

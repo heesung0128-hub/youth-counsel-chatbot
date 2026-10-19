@@ -19,6 +19,8 @@ export interface CounselorProfile {
   sampleLine: string;
   /** 위기 안내 문장 (차분한 톤, 1388·109 포함). 내장 응답과 서버 규칙 위기 턴에 사용 */
   crisisMessage: string;
+  /** 폭력·학대 피해를 말했을 때의 차분한 안내 (112·117·1388) */
+  violenceCrisisMessage: string;
 }
 
 export interface ChatMessage {
