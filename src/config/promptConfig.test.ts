@@ -82,6 +82,15 @@ test('violence or abuse crisis points to 112·117·1388, not only 109', () => {
   }
 });
 
+test('숭이 calms strong emotions first and offers 2~3 options to choose from', () => {
+  const prompt = buildSystemPrompt('monkey');
+  assert.ok(prompt.includes('원인을 묻거나 해결책을 주기 전에 감정을 가라앉힐 방법부터'));
+  assert.ok(prompt.includes('방법 2~3가지를 나란히 보여 주고 고르게 한다'));
+  for (const other of ['dog', 'cat'] as const) {
+    assert.ok(!buildSystemPrompt(other).includes('어느 쪽이 끌려?'), other);
+  }
+});
+
 test('prompt tells the model to tell the story right away instead of offering it', () => {
   const prompt = buildSystemPrompt('dog');
   assert.ok(prompt.includes('[바로 응하기]'));
