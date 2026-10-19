@@ -1,18 +1,18 @@
 /**
- * 답변을 만드는 AI 제공자 선택.
+ * 답변을 만드는 AI: OpenAI Responses API (POST /v1/responses)
  *
- * AI_PROVIDER 환경변수로 고릅니다 (기본: gemini).
- *   gemini      GEMINI_API_KEY, GEMINI_MODEL
- *   cloudflare  CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, CLOUDFLARE_MODEL (예: @cf/openai/gpt-oss-120b)
- *   upstage     UPSTAGE_API_KEY, UPSTAGE_MODEL (예: solar-pro2), UPSTAGE_BASE_URL (기본 https://api.upstage.ai/v1)
- *
- * Cloudflare·Upstage는 OpenAI 호환 채팅 API를 씁니다. 두 곳 모두 응답 형식(JSON 스키마) 강제 기능이
- * 확실하지 않아, 프롬프트의 JSON 지시 + 응답에서 JSON 부분만 꺼내는 방식으로 처리합니다.
+ * - 응답 형식은 JSON 스키마(Structured Outputs, strict)로 강제합니다.
+ * - store: false 로 보내 OpenAI에 대화 상태가 저장되지 않게 합니다.
+ *   (OpenAI는 API 데이터를 기본적으로 학습에 쓰지 않으며, 오남용 모니터링 로그는 최대 30일 보관)
+ * - 설정 값은 aiConfig.ts 참고 (OPENAI_API_KEY, OPENAI_MODEL, OPENAI_REASONING_EFFORT, OPENAI_BASE_URL)
  */
-import { GoogleGenAI, Type } from '@google/genai';
-import { EmptyResponseError, getGeminiModel, getThinkingLevel } from './geminiConfig.ts';
-
-export type ProviderName = 'gemini' | 'cloudflare' | 'upstage';
+import {
+  EmptyResponseError,
+  RefusalError,
+  getOpenAIBaseUrl,
+  getOpenAIModel,
+  getReasoningEffort,
+} from './aiConfig.ts';
 
 export interface ChatTurn {
   role: 'user' | 'assistant';
@@ -20,143 +20,70 @@ export interface ChatTurn {
 }
 
 export interface ProviderInfo {
-  name: ProviderName;
+  name: 'openai';
   model: string;
   configured: boolean;
 }
 
 export function getProviderInfo(): ProviderInfo {
-  const raw = (process.env.AI_PROVIDER || 'gemini').trim().toLowerCase();
-  if (raw === 'cloudflare') {
-    return {
-      name: 'cloudflare',
-      model: process.env.CLOUDFLARE_MODEL || '@cf/openai/gpt-oss-120b',
-      configured: !!(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN),
-    };
-  }
-  if (raw === 'upstage') {
-    return {
-      name: 'upstage',
-      model: process.env.UPSTAGE_MODEL || 'solar-pro2',
-      configured: !!process.env.UPSTAGE_API_KEY,
-    };
-  }
-  return { name: 'gemini', model: getGeminiModel(), configured: !!process.env.GEMINI_API_KEY };
+  return { name: 'openai', model: getOpenAIModel(), configured: !!process.env.OPENAI_API_KEY?.trim() };
 }
 
-/** 모델 응답에서 JSON 객체 부분만 꺼냄 (생각 과정 태그·코드 블록·앞뒤 설명 제거) */
-export function extractJson(text: string): string {
-  const cleaned = text
-    .replace(/<think>[\s\S]*?<\/think>/gi, '')
-    .replace(/```(?:json)?/gi, '')
-    .trim();
-  const start = cleaned.indexOf('{');
-  const end = cleaned.lastIndexOf('}');
-  if (start < 0 || end <= start) throw new SyntaxError('No JSON object in model response');
-  return cleaned.slice(start, end + 1);
-}
-
-// ---------- Gemini ----------
-let geminiClient: GoogleGenAI | undefined;
-function getGeminiClient(): GoogleGenAI {
-  if (!geminiClient) {
-    geminiClient = new GoogleGenAI({
-      apiKey: process.env.GEMINI_API_KEY,
-      httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
-    });
-  }
-  return geminiClient;
-}
-
-async function generateWithGemini(system: string, history: ChatTurn[], userText: string, signal: AbortSignal) {
-  const response = await getGeminiClient().models.generateContent({
-    model: getGeminiModel(),
-    contents: [
-      ...history.map((t) => ({ role: t.role === 'user' ? 'user' : 'model', parts: [{ text: t.text }] })),
-      { role: 'user', parts: [{ text: userText }] },
-    ],
-    config: {
-      systemInstruction: system,
-      thinkingConfig: { thinkingLevel: getThinkingLevel() },
-      abortSignal: signal,
-      responseMimeType: 'application/json',
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          message: { type: Type.STRING, description: '학생에게 전할 따뜻하고 차분한 상담사의 응답' },
-          suggestedKeywords: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING },
-            description: '학생이 바로 누를 수 있는 대화 맥락 맞춤형 다음 추천 키워드 정확히 3개',
-          },
-          riskLevel: { type: Type.STRING, enum: ['safe', 'concern', 'crisis'], description: '학생의 심리적 위기 수준 판단' },
-          counselorNote: { type: Type.STRING, description: '상담 메모 (선택)' },
-          shouldOfferReferral: { type: Type.BOOLEAN, description: '실제 상담사 또는 전문기관 연계 제안 카드를 표시할지 여부' },
-          referralStage: { type: Type.INTEGER, description: '연계 단계 (2: 비대면 익명 상담사, 3: Wee클래스 및 전문기관)' },
-          safetyCheck: { type: Type.BOOLEAN, description: '간접적인 위기 신호에 대해 안전 확인 질문을 한 답변이면 true' },
-        },
-        required: ['message', 'suggestedKeywords', 'riskLevel'],
-      },
+/** 상담 답변 JSON 스키마 (strict 모드: 모든 항목 필수, 정의되지 않은 항목 금지) */
+export const COUNSELOR_REPLY_SCHEMA = {
+  type: 'object',
+  properties: {
+    message: { type: 'string', description: '학생에게 전할 캐릭터의 답변' },
+    suggestedKeywords: {
+      type: 'array',
+      items: { type: 'string' },
+      description: '학생이 바로 누를 수 있는 다음 추천 키워드 정확히 3개 (각 10자 이내, 반말)',
     },
-  });
-  if (!response.text) throw new EmptyResponseError('Empty response from model');
-  return response.text;
+    riskLevel: { type: 'string', enum: ['safe', 'concern', 'crisis'], description: '학생의 심리적 위기 수준' },
+    counselorNote: { type: 'string', description: '내부 메모 (없으면 빈 문자열)' },
+    shouldOfferReferral: { type: 'boolean', description: '상담 기관 연계 카드를 표시할지' },
+    referralStage: { type: 'integer', enum: [2, 3], description: '연계 단계 (2: 1388 비대면 상담, 3: Wee클래스·전문기관)' },
+    safetyCheck: { type: 'boolean', description: '간접적인 위기 신호에 대해 안전 확인 질문을 한 답변이면 true' },
+  },
+  required: ['message', 'suggestedKeywords', 'riskLevel', 'counselorNote', 'shouldOfferReferral', 'referralStage', 'safetyCheck'],
+  additionalProperties: false,
+} as const;
+
+/** Responses API 요청 본문 (테스트하기 쉽게 따로 만듦) */
+export function buildOpenAIRequest(input: { system: string; history: ChatTurn[]; userText: string }) {
+  const effort = getReasoningEffort();
+  return {
+    model: getOpenAIModel(),
+    input: [
+      { role: 'system', content: input.system },
+      ...input.history.map((t) => ({ role: t.role, content: t.text })),
+      { role: 'user', content: input.userText },
+    ],
+    store: false,
+    reasoning: { effort },
+    max_output_tokens: effort === 'none' || effort === 'low' ? 2000 : 6000,
+    text: {
+      format: { type: 'json_schema', name: 'counselor_reply', strict: true, schema: COUNSELOR_REPLY_SCHEMA },
+    },
+  };
 }
 
-// ---------- OpenAI 호환 (Cloudflare Workers AI, Upstage) ----------
-function openAICompatibleTarget(info: ProviderInfo): { url: string; token: string } {
-  if (info.name === 'cloudflare') {
-    return {
-      url: `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/ai/v1/chat/completions`,
-      token: process.env.CLOUDFLARE_API_TOKEN || '',
-    };
+/** Responses API 응답에서 답변 JSON 문자열을 꺼냄 (거절·잘림·빈 응답은 오류로) */
+export function parseOpenAIResponse(data: any): string {
+  if (data?.status === 'incomplete') {
+    throw new EmptyResponseError(`Incomplete response: ${data?.incomplete_details?.reason ?? 'unknown'}`);
   }
-  const base = (process.env.UPSTAGE_BASE_URL || 'https://api.upstage.ai/v1').replace(/\/$/, '');
-  return { url: `${base}/chat/completions`, token: process.env.UPSTAGE_API_KEY || '' };
-}
-
-async function generateWithOpenAICompatible(
-  info: ProviderInfo,
-  system: string,
-  history: ChatTurn[],
-  userText: string,
-  signal: AbortSignal
-) {
-  const { url, token } = openAICompatibleTarget(info);
-  const messages = [
-    { role: 'system', content: system },
-    ...history.map((t) => ({ role: t.role, content: t.text })),
-    { role: 'user', content: `${userText}\n응답은 위 [응답 포맷]의 JSON 객체 하나만 출력하고, 그 밖의 글은 쓰지 마.` },
-  ];
-
-  const send = async (useJsonMode: boolean) =>
-    fetch(url, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: info.model,
-        messages,
-        max_tokens: 1500,
-        ...(useJsonMode ? { response_format: { type: 'json_object' } } : {}),
-      }),
-      signal,
-    });
-
-  let res = await send(true);
-  if (res.status === 400) {
-    // JSON 모드를 지원하지 않는 모델이면 JSON 모드 없이 한 번 더
-    const detail = await res.text();
-    if (/response_format|json/i.test(detail)) res = await send(false);
-    else throw Object.assign(new Error(`HTTP 400 ${detail.slice(0, 300)}`), { status: 400 });
+  let text = '';
+  for (const item of Array.isArray(data?.output) ? data.output : []) {
+    if (item?.type !== 'message' || !Array.isArray(item.content)) continue;
+    for (const part of item.content) {
+      if (part?.type === 'refusal') throw new RefusalError(String(part.refusal ?? 'refused'));
+      if (part?.type === 'output_text' && typeof part.text === 'string') text += part.text;
+    }
   }
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    throw Object.assign(new Error(`HTTP ${res.status} ${detail.slice(0, 300)}`), { status: res.status });
-  }
-  const data: any = await res.json();
-  const content = data?.choices?.[0]?.message?.content;
-  if (!content || typeof content !== 'string') throw new EmptyResponseError('Empty response from model');
-  return extractJson(content);
+  if (!text && typeof data?.output_text === 'string') text = data.output_text;
+  if (!text.trim()) throw new EmptyResponseError('Empty response from model');
+  return text;
 }
 
 /** 시스템 프롬프트·최근 대화·이번 메시지로 답변 JSON 문자열을 받아옴 */
@@ -166,7 +93,19 @@ export async function generateReply(input: {
   userText: string;
   signal: AbortSignal;
 }): Promise<string> {
-  const info = getProviderInfo();
-  if (info.name === 'gemini') return generateWithGemini(input.system, input.history, input.userText, input.signal);
-  return generateWithOpenAICompatible(info, input.system, input.history, input.userText, input.signal);
+  const res = await fetch(`${getOpenAIBaseUrl()}/responses`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY?.trim() ?? ''}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(buildOpenAIRequest(input)),
+    signal: input.signal,
+  });
+  if (!res.ok) {
+    // 오류 본문에는 학생 메시지가 없으므로 원인 파악용으로 앞부분만 남김
+    const detail = await res.text().catch(() => '');
+    throw Object.assign(new Error(`HTTP ${res.status} ${detail.slice(0, 300)}`), { status: res.status });
+  }
+  return parseOpenAIResponse(await res.json());
 }

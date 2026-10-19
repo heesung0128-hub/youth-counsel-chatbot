@@ -21,7 +21,6 @@ import { EMERGENCY_HOTLINES, CRISIS_MESSAGES } from '../config/crisisConfig';
 import { REFERRAL_CONFIG } from '../config/referralConfig';
 import { detectPersonalInfo, PERSONAL_INFO_LABELS, type PersonalInfoKind } from '../utils/personalInfo';
 import { CounselorAvatar } from './CounselorAvatar';
-import { PWAInstallButton } from './PWAInstallButton';
 import {
   playMessageBlipSound,
   playSendSoftSound,
@@ -42,6 +41,10 @@ interface ChatScreenProps {
   onOpenFeedback?: () => void;
   onOpenReferralDetails: (stage: 2 | 3) => void;
 }
+
+/** 상단 바 아이콘 버튼 공통 모양 (모두 같은 크기의 원형) */
+const HEADER_ICON_BUTTON =
+  'w-9 h-9 rounded-full bg-white/70 hover:bg-white flex items-center justify-center shadow-2xs border border-white/60 transition hover:scale-105 active:scale-95 cursor-pointer';
 
 export const ChatScreen: React.FC<ChatScreenProps> = ({
   counselorId,
@@ -147,56 +150,46 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                 {isLoading ? '생각하는 중…' : counselorProfile.badge}
               </span>
             </div>
-            <span className="text-[11px] text-[#527385] leading-none mt-0.5 font-medium whitespace-nowrap truncate max-w-[9.5rem]">
+            <span className="text-[11px] text-[#527385] leading-none mt-0.5 font-medium whitespace-nowrap truncate max-w-[11rem]">
               {isLoading ? '네 이야기를 소중히 정리하고 있어' : '항상 네 편에서 들어줄게'}
             </span>
           </div>
         </div>
 
-        {/* Right: Sound toggle, Lock, PWA, and Circular "?" Help Button */}
-        <div className="flex items-center gap-1 sm:gap-1.5">
+        {/* Right: 효과음 · 잠금 · 의견(★) · 도움말(?) — 같은 크기·간격으로 정렬 */}
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
             type="button"
             onClick={handleToggleSound}
             title={soundOn ? '효과음 켜짐 (클릭하여 끄기)' : '효과음 꺼짐 (클릭하여 켜기)'}
             aria-label={soundOn ? '효과음 끄기' : '효과음 켜기'}
-            className="w-8.5 h-8.5 rounded-full bg-white/70 hover:bg-white text-[#476C7F] hover:text-[#1E3745] flex items-center justify-center shadow-2xs border border-white/60 transition cursor-pointer"
+            className={HEADER_ICON_BUTTON}
           >
-            {soundOn ? <Volume2 className="w-3.5 h-3.5 text-[#5BB7E6]" /> : <VolumeX className="w-3.5 h-3.5 text-slate-400" />}
+            {soundOn ? <Volume2 className="w-4 h-4 text-[#5BB7E6]" /> : <VolumeX className="w-4 h-4 text-slate-400" />}
           </button>
 
-          <button
-            type="button"
-            onClick={onLockApp}
-            title="화면 잠금"
-            aria-label="화면 잠금"
-            className="w-8.5 h-8.5 rounded-full bg-white/70 hover:bg-white text-[#476C7F] hover:text-[#1E3745] flex items-center justify-center shadow-2xs border border-white/60 transition cursor-pointer"
-          >
-            <Lock className="w-3.5 h-3.5" />
+          <button type="button" onClick={onLockApp} title="화면 잠금" aria-label="화면 잠금" className={HEADER_ICON_BUTTON}>
+            <Lock className="w-4 h-4 text-[#476C7F]" />
           </button>
 
-          <PWAInstallButton />
-
-          {/* ★ 피드백 (개선할 점·좋은 점) */}
           {onOpenFeedback && (
             <button
               type="button"
               onClick={onOpenFeedback}
               title="의견 보내기 (개선할 점 · 좋은 점)"
               aria-label="의견 보내기"
-              className="w-8.5 h-8.5 rounded-full bg-white/70 hover:bg-white flex items-center justify-center shadow-2xs border border-white/60 transition cursor-pointer"
+              className={HEADER_ICON_BUTTON}
             >
               <Star className="w-4 h-4 text-[#F2B21B]" />
             </button>
           )}
 
-          {/* Circular "?" Button */}
           <button
             type="button"
             onClick={onOpenHelp}
             title="도움말 및 안전 안내"
             aria-label="도움말 열기"
-            className="w-8.5 h-8.5 rounded-full bg-white text-[#214355] hover:bg-[#FFF3B0] flex items-center justify-center shadow-xs border-2 border-[#7CC6EA] font-extrabold text-base transition-all hover:scale-105 active:scale-95 cursor-pointer"
+            className={`${HEADER_ICON_BUTTON} !bg-white border-2 !border-[#7CC6EA]`}
           >
             <HelpCircle className="w-4.5 h-4.5 text-[#24526A]" />
           </button>

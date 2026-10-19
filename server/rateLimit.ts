@@ -1,8 +1,8 @@
 /**
  * 요청 횟수 제한 (Upstash Redis).
  *
- * - Gemini 무료 쿼터를 보호하기 위해 IP별(분/일) + 전체(일) 한도를 둡니다.
- * - 한도를 넘어도 오류를 내지 않고, 호출 측(chatService)이 Gemini 대신 내장 응답을 반환합니다.
+ * - AI(OpenAI) 사용 요금이 예상보다 커지지 않도록 IP별(분/일) + 전체(일) 한도를 둡니다.
+ * - 한도를 넘어도 오류를 내지 않고, 호출 측(chatService)이 AI 대신 내장 응답을 반환합니다.
  *   (위기 감지는 서버 내 규칙 기반이라 한도와 무관하게 항상 동작)
  * - Upstash 환경변수가 없거나 Redis 오류가 나면 제한 없이 통과(fail-open)시켜 상담이 끊기지 않게 합니다.
  *
@@ -10,7 +10,7 @@
  *   KV_REST_API_URL / KV_REST_API_TOKEN  (또는 UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN)
  * 선택 환경변수 (숫자):
  *   RATE_LIMIT_PER_MIN (기본 20), RATE_LIMIT_PER_DAY (기본 300), RATE_LIMIT_GLOBAL_PER_DAY (기본 450)
- *   ※ 전체 일일 한도는 Gemini 무료 일일 한도(gemini-3.5-flash-lite 약 500회)보다 낮게 유지하세요.
+ *   ※ 전체 일일 한도 × 메시지당 요금이 하루 예산을 넘지 않게 정하세요. (OpenAI 대시보드의 사용 한도도 함께 설정 권장)
  *
  * 참고: 학교 Wi-Fi는 여러 학생이 같은 IP를 공유하므로 IP별 한도를 너무 낮게 잡지 마세요.
  */

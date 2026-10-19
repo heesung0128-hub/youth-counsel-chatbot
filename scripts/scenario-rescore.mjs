@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 저장된 시나리오 결과(JSON)를 Gemini를 다시 부르지 않고 현재 판정 규칙으로 다시 채점합니다.
+ * 저장된 시나리오 결과(JSON)를 AI를 다시 부르지 않고 현재 판정 규칙으로 다시 채점합니다.
  * 판정 규칙(scenario-checks.mjs)을 고친 뒤 확인용으로 사용하세요.
  *   node scripts/scenario-rescore.mjs scripts/scenario-results/<파일>.json
  */

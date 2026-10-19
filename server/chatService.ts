@@ -13,7 +13,7 @@ import { evaluateConversationRisk } from '../src/utils/conversationRisk';
 import { maskPersonalInfo } from '../src/utils/personalInfo';
 import { checkRateLimit, getRateLimitStatus } from './rateLimit';
 import { avoidConsecutiveEmoji, chooseCrisisSafeMessage, resolveSafetyCheck } from './responsePolicy';
-import { classifyGeminiError, getThinkingLevel, getTimeoutMs, withOverloadRetry } from './geminiConfig';
+import { classifyAiError, getReasoningEffort, getTimeoutMs, withOverloadRetry } from './aiConfig';
 import { generateReply, getProviderInfo, type ChatTurn } from './aiProvider';
 
 const MAX_MESSAGE_LENGTH = 1000;
@@ -40,7 +40,7 @@ export async function getHealth(): Promise<ServiceResult> {
       provider: getProviderInfo().name,
       hasApiKey: getProviderInfo().configured,
       model: getProviderInfo().model,
-      thinkingLevel: getProviderInfo().name === 'gemini' ? getThinkingLevel() : undefined,
+      reasoningEffort: getReasoningEffort(),
       rateLimit: await getRateLimitStatus(),
       timestamp: new Date().toISOString(),
     },
@@ -88,7 +88,7 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
       return { status: 200, body: { ...fallback, source: 'rate_limited' } };
     }
 
-    // 2. AI 호출 (AI_PROVIDER 환경변수로 제공자 선택)
+    // 2. AI 호출 (OpenAI, 설정은 aiConfig.ts)
     const profile = COUNSELOR_PROFILES[validCounselorId];
 
     const recentHistory: ChatTurn[] = Array.isArray(conversationHistory)
@@ -166,7 +166,7 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
     };
   } catch (error) {
     // 실패 사유를 분류해 로그(Vercel Logs)와 응답(fallbackReason)에 남김. 학생 메시지 내용은 기록하지 않음
-    const fallbackReason = classifyGeminiError(error);
+    const fallbackReason = classifyAiError(error);
     const status = (error as { status?: unknown } | null)?.status;
     console.error(
       `[ai_fallback] provider=${getProviderInfo().name} reason=${fallbackReason} model=${getProviderInfo().model} status=${status ?? '-'}`,

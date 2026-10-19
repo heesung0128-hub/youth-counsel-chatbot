@@ -1,39 +1,76 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { extractJson, getProviderInfo } from './aiProvider.ts';
+import { buildOpenAIRequest, COUNSELOR_REPLY_SCHEMA, getProviderInfo, parseOpenAIResponse } from './aiProvider.ts';
+import { EmptyResponseError, RefusalError } from './aiConfig.ts';
 
-test('extractJson pulls the JSON object out of extra text, code fences and think tags', () => {
-  assert.equal(extractJson('{"message":"안녕"}'), '{"message":"안녕"}');
-  assert.equal(extractJson('```json\n{"message":"안녕"}\n```'), '{"message":"안녕"}');
-  assert.equal(extractJson('<think>생각 중 {not json}</think>\n여기 답변이야: {"message":"안녕","riskLevel":"safe"} 끝'), '{"message":"안녕","riskLevel":"safe"}');
-  assert.throws(() => extractJson('그냥 문장만 있어'), SyntaxError);
-});
-
-test('getProviderInfo reads AI_PROVIDER and reports whether keys are configured', () => {
+const withEnv = (vars: Record<string, string | undefined>, fn: () => void) => {
   const saved = { ...process.env };
   try {
-    for (const k of ['AI_PROVIDER', 'GEMINI_API_KEY', 'CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_MODEL', 'UPSTAGE_API_KEY', 'UPSTAGE_MODEL']) {
-      delete process.env[k];
+    for (const [k, v] of Object.entries(vars)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
     }
-    assert.deepEqual(
-      { name: getProviderInfo().name, configured: getProviderInfo().configured },
-      { name: 'gemini', configured: false }
-    );
-
-    process.env.AI_PROVIDER = 'cloudflare';
-    process.env.CLOUDFLARE_ACCOUNT_ID = 'acc';
-    assert.equal(getProviderInfo().configured, false); // 토큰이 없으면 미설정
-    process.env.CLOUDFLARE_API_TOKEN = 'tok';
-    process.env.CLOUDFLARE_MODEL = '@cf/qwen/test';
-    assert.deepEqual(getProviderInfo(), { name: 'cloudflare', model: '@cf/qwen/test', configured: true });
-
-    process.env.AI_PROVIDER = 'Upstage';
-    process.env.UPSTAGE_API_KEY = 'up';
-    assert.deepEqual(getProviderInfo(), { name: 'upstage', model: 'solar-pro2', configured: true });
-
-    process.env.AI_PROVIDER = 'something-else';
-    assert.equal(getProviderInfo().name, 'gemini');
+    fn();
   } finally {
     process.env = saved;
   }
+};
+
+test('getProviderInfo reports OpenAI and whether the key is set', () => {
+  withEnv({ OPENAI_API_KEY: undefined, OPENAI_MODEL: undefined }, () => {
+    assert.deepEqual(getProviderInfo(), { name: 'openai', model: 'gpt-6-luna', configured: false });
+  });
+  withEnv({ OPENAI_API_KEY: '  ', OPENAI_MODEL: 'gpt-6.1-sol' }, () => {
+    assert.deepEqual(getProviderInfo(), { name: 'openai', model: 'gpt-6.1-sol', configured: false });
+  });
+  withEnv({ OPENAI_API_KEY: 'sk-test' }, () => assert.equal(getProviderInfo().configured, true));
+});
+
+test('buildOpenAIRequest uses store:false, strict JSON schema and keeps message order', () => {
+  withEnv({ OPENAI_MODEL: undefined, OPENAI_REASONING_EFFORT: undefined }, () => {
+    const body = buildOpenAIRequest({
+      system: 'SYSTEM',
+      history: [
+        { role: 'assistant', text: '안녕?' },
+        { role: 'user', text: '피곤해' },
+      ],
+      userText: '학생의 메시지: "쉬고 싶어"',
+    });
+    assert.equal(body.model, 'gpt-6-luna');
+    assert.equal(body.store, false);
+    assert.deepEqual(body.reasoning, { effort: 'low' });
+    assert.deepEqual(
+      body.input.map((m) => m.role),
+      ['system', 'assistant', 'user', 'user']
+    );
+    assert.equal(body.input[3].content, '학생의 메시지: "쉬고 싶어"');
+    assert.equal(body.text.format.type, 'json_schema');
+    assert.equal(body.text.format.strict, true);
+  });
+});
+
+test('strict schema lists every property as required and forbids extras', () => {
+  assert.deepEqual([...COUNSELOR_REPLY_SCHEMA.required].sort(), Object.keys(COUNSELOR_REPLY_SCHEMA.properties).sort());
+  assert.equal(COUNSELOR_REPLY_SCHEMA.additionalProperties, false);
+});
+
+test('parseOpenAIResponse reads output_text parts and handles refusal, truncation and empty output', () => {
+  const ok = {
+    status: 'completed',
+    output: [
+      { type: 'reasoning', summary: [] },
+      { type: 'message', content: [{ type: 'output_text', text: '{"message":"안녕"}' }] },
+    ],
+  };
+  assert.equal(parseOpenAIResponse(ok), '{"message":"안녕"}');
+  assert.equal(parseOpenAIResponse({ output: [], output_text: '{"a":1}' }), '{"a":1}');
+  assert.throws(
+    () => parseOpenAIResponse({ output: [{ type: 'message', content: [{ type: 'refusal', refusal: 'no' }] }] }),
+    RefusalError
+  );
+  assert.throws(
+    () => parseOpenAIResponse({ status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' }, output: [] }),
+    EmptyResponseError
+  );
+  assert.throws(() => parseOpenAIResponse({ output: [] }), EmptyResponseError);
 });

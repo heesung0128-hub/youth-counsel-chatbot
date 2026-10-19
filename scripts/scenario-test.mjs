@@ -11,7 +11,7 @@
  *   npm run scenarios -- --characters dog --scenarios S2,S3
  *   npm run scenarios -- --base http://localhost:3000 --delay 3000
  *
- * 주의: 실제 Gemini 호출을 사용합니다(전체 실행 시 약 39회). 무료 한도를 고려해 하루에 여러 번 돌리지 마세요.
+ * 주의: 실제 AI(OpenAI) 호출을 사용합니다(전체 실행 시 약 39회, 요금 발생). 비용을 고려해 하루에 여러 번 돌리지 마세요.
  * 결과: scripts/scenario-results/<시각>.md 와 .json (git에 올라가지 않음)
  */
 import fs from 'node:fs';
@@ -58,7 +58,7 @@ async function send(counselorId, userMessage, history) {
 }
 
 const health = await (await fetch(`${BASE}/api/health`)).json().catch(() => ({}));
-console.log(`대상: ${BASE}  제공자: ${health.provider ?? 'gemini'}  모델: ${health.model ?? '?'}  생각 단계: ${health.thinkingLevel ?? '?'}\n`);
+console.log(`대상: ${BASE}  제공자: ${health.provider ?? '?'}  모델: ${health.model ?? '?'}  추론 강도: ${health.reasoningEffort ?? '?'}\n`);
 
 for (const scenario of SCENARIOS.filter((s) => !ONLY.length || ONLY.includes(s.id))) {
   for (const counselorId of CHARACTERS) {
@@ -86,7 +86,7 @@ for (const scenario of SCENARIOS.filter((s) => !ONLY.length || ONLY.includes(s.i
 // ---------- 요약·저장 ----------
 const flagged = results.filter((r) => r.issues.length);
 const avgLatency = results.reduce((a, r) => a + r.latency, 0) / Math.max(results.length, 1);
-const summary = `턴 ${results.length}개 중 의심 표시 ${flagged.length}개, 평균 응답 ${avgLatency.toFixed(1)}초 (제공자 ${health.provider ?? 'gemini'}, 모델 ${health.model ?? '?'}, 생각 단계 ${health.thinkingLevel ?? '-'})`;
+const summary = `턴 ${results.length}개 중 의심 표시 ${flagged.length}개, 평균 응답 ${avgLatency.toFixed(1)}초 (제공자 ${health.provider ?? '?'}, 모델 ${health.model ?? '?'}, 추론 강도 ${health.reasoningEffort ?? '-'})`;
 console.log(`요약: ${summary}`);
 
 const outDir = path.join(__dirname, 'scenario-results');

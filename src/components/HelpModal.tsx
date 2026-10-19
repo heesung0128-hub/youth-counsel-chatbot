@@ -183,10 +183,10 @@ export const HelpModal: React.FC<HelpModalProps> = ({
               <div className="p-3.5 rounded-2xl bg-[#F6FAFD] border border-[#E1F0F8]">
                 <h3 className="font-bold text-[#1E3745] flex items-center gap-1.5 mb-1 text-sm">
                   <span className="w-5 h-5 rounded-full bg-[#FFD966] text-[#4A3B00] text-xs flex items-center justify-center font-bold">5</span>
-                  홈 화면에 앱 설치하기 (PWA)
+                  의견 보내기 (★)
                 </h3>
                 <p className="text-xs text-[#527080] leading-relaxed">
-                  스토어 다운로드 없이 브라우저의 <strong>[앱 설치]</strong> 버튼을 누르면 휴대폰 바탕화면에 즉시 설치돼요. 주소창 없는 전체 화면으로 작동하여 더 안전하고 빠르게 이용할 수 있습니다.
+                  상단 바의 <strong>★</strong> 버튼으로 개선할 점이나 좋았던 점을 익명으로 보낼 수 있어요. 이름·연락처 같은 개인정보는 쓰지 말아 주세요.
                 </p>
               </div>
             </div>
