@@ -10,6 +10,7 @@ import {
 import { CounselorId } from '../src/types';
 import { evaluateCrisisSignals } from '../src/utils/crisisDetector';
 import { evaluateConversationRisk } from '../src/utils/conversationRisk';
+import { maskPersonalInfo } from '../src/utils/personalInfo';
 import { checkRateLimit, getRateLimitStatus } from './rateLimit';
 import { avoidConsecutiveEmoji, chooseCrisisSafeMessage, resolveSafetyCheck } from './responsePolicy';
 import { classifyGeminiError, getThinkingLevel, getTimeoutMs, withOverloadRetry } from './geminiConfig';
@@ -93,7 +94,8 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
     const recentHistory: ChatTurn[] = Array.isArray(conversationHistory)
       ? conversationHistory.slice(-MAX_HISTORY_TURNS).map((m: any) => ({
           role: m?.sender === 'user' ? 'user' : 'assistant',
-          text: String(m?.text || '').slice(0, MAX_MESSAGE_LENGTH),
+          // 전화번호·이메일 등은 AI 서비스로 보내기 전에 가림
+          text: maskPersonalInfo(String(m?.text || '').slice(0, MAX_MESSAGE_LENGTH)),
         }))
       : [];
 
@@ -105,7 +107,7 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
         generateReply({
           system: dynamicSystemPrompt,
           history: recentHistory,
-          userText: `학생의 메시지: "${cleanMessage}"
+          userText: `학생의 메시지: "${maskPersonalInfo(cleanMessage)}"
 이 학생의 고민을 경청하고 차분하게 마음을 정리할 수 있도록 응답을 JSON 형식으로 작성해 줘.`,
           signal,
         }),

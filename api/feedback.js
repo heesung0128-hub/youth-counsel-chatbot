@@ -7936,14 +7936,17 @@ function getRedis() {
   return redisClient;
 }
 
+// src/utils/personalInfo.ts
+function maskPersonalInfo(text) {
+  if (!text) return text;
+  return text.replace(/0\d{1,2}[-\s.]?\d{3,4}[-\s.]?\d{4}/g, "[\uAC00\uB9BC]").replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, "[\uAC00\uB9BC]").replace(/\d+\s*동\s*\d+\s*호/g, "[\uAC00\uB9BC]").replace(/\d{6,}/g, "[\uAC00\uB9BC]");
+}
+
 // server/feedbackService.ts
 var FEEDBACK_KEY = "maum-todak:feedback";
 var MAX_TEXT = 500;
 var MAX_STORED = 2e3;
 var COUNSELOR_IDS = ["cat", "dog", "monkey"];
-function maskPersonalInfo(text) {
-  return text.replace(/0\d{1,2}[-\s.]?\d{3,4}[-\s.]?\d{4}/g, "***").replace(/\d{6,}/g, "***");
-}
 function parseFeedback(raw, now = /* @__PURE__ */ new Date()) {
   const body = raw && typeof raw === "object" ? raw : {};
   const kind = body.kind === "rating" || body.kind === "feedback" ? body.kind : null;

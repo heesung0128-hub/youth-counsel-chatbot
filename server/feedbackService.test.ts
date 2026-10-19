@@ -29,8 +29,8 @@ test('parseFeedback trims long text and drops unknown counselor ids', () => {
 });
 
 test('maskPersonalInfo hides phone numbers and long digit runs', () => {
-  assert.equal(maskPersonalInfo('제 번호 010-1234-5678 이에요'), '제 번호 *** 이에요');
-  assert.equal(maskPersonalInfo('학번 20261234'), '학번 ***');
+  assert.equal(maskPersonalInfo('제 번호 010-1234-5678 이에요'), '제 번호 [가림] 이에요');
+  assert.equal(maskPersonalInfo('학번 20261234'), '학번 [가림]');
   assert.equal(maskPersonalInfo('별 5개!'), '별 5개!');
 });
 

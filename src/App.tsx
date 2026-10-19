@@ -5,6 +5,7 @@ import { evaluateConversationRisk } from './utils/conversationRisk';
 import { shouldShowReferralCard } from './utils/referralDisplay';
 import { loadRatingState, postponeRating, shouldPromptRating, type RatingPromptState } from './utils/ratingPrompt';
 import { FeedbackModal } from './components/FeedbackModal';
+import { ConsentModal, CONSENT_VERSION } from './components/ConsentModal';
 import {
   generateAnonymousId,
   generateTransferCode,
@@ -26,6 +27,7 @@ const STORAGE_KEYS = {
   LOCK_SETTINGS: 'seocho_lock_settings',
   LAST_ACTIVE: 'seocho_last_active_timestamp',
   RATING_PROMPT: 'seocho_rating_prompt',
+  CONSENT: 'seocho_consent_version',
 };
 
 export default function App() {
@@ -59,6 +61,17 @@ export default function App() {
 
   // 5. Modals
   const [isHelpOpen, setIsHelpOpen] = useState<boolean>(false);
+  // 첫 실행 안내·동의 (내용이 바뀌어 버전이 올라가면 다시 확인)
+  const [hasConsent, setHasConsent] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEYS.CONSENT) === CONSENT_VERSION;
+    } catch {
+      return false;
+    }
+  });
+  const [isConsentOpen, setIsConsentOpen] = useState<boolean>(false);
+  const [pendingCounselor, setPendingCounselor] = useState<CounselorId | undefined>(undefined);
+
   // 앱 평가 팝업(rating) / ★ 의견 창(feedback)
   const [feedbackMode, setFeedbackMode] = useState<'rating' | 'feedback' | null>(null);
   const [ratingState, setRatingState] = useState<RatingPromptState>(() => {
@@ -198,8 +211,15 @@ export default function App() {
   };
 
   // Handler: Start Chat
-  const handleStartChat = (counselorId?: CounselorId) => {
+  const handleStartChat = (counselorId?: CounselorId, consentGiven = hasConsent) => {
     const targetCounselor = counselorId || selectedCounselorId || 'cat';
+
+    // 안내·동의를 확인하기 전에는 대화를 시작하지 않음
+    if (!consentGiven) {
+      setPendingCounselor(targetCounselor);
+      setIsConsentOpen(true);
+      return;
+    }
     if (!selectedCounselorId || selectedCounselorId !== targetCounselor) {
       handleSelectCounselor(targetCounselor);
     }
@@ -447,6 +467,22 @@ export default function App() {
             setIsPinSetupOpen(false);
             proceedToChat();
           }}
+        />
+
+        {/* 첫 실행 안내·동의 */}
+        <ConsentModal
+          isOpen={isConsentOpen}
+          onAgree={() => {
+            try {
+              localStorage.setItem(STORAGE_KEYS.CONSENT, CONSENT_VERSION);
+            } catch {
+              // 저장할 수 없으면 이번 사용 동안만 기억
+            }
+            setHasConsent(true);
+            setIsConsentOpen(false);
+            handleStartChat(pendingCounselor, true);
+          }}
+          onCancel={() => setIsConsentOpen(false)}
         />
 
         {/* 앱 평가 팝업 · ★ 의견 창 */}

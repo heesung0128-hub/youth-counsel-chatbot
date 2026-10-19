@@ -9,6 +9,7 @@
 import { Ratelimit } from '@upstash/ratelimit';
 import type { Redis } from '@upstash/redis';
 import { getRedis } from './rateLimit.ts';
+import { maskPersonalInfo } from '../src/utils/personalInfo.ts';
 import type { ServiceResult } from './chatService.ts';
 
 export const FEEDBACK_KEY = 'maum-todak:feedback';
@@ -24,12 +25,8 @@ export interface FeedbackEntry {
   at: string;
 }
 
-/** 전화번호·긴 숫자열 가리기 (개인정보 보호) */
-export function maskPersonalInfo(text: string): string {
-  return text
-    .replace(/0\d{1,2}[-\s.]?\d{3,4}[-\s.]?\d{4}/g, '***')
-    .replace(/\d{6,}/g, '***');
-}
+/** 개인정보 가리기: 앱 전체에서 같은 규칙 사용 (src/utils/personalInfo.ts) */
+export { maskPersonalInfo };
 
 /** 입력 검증. 잘못된 값이면 오류 메시지 문자열 */
 export function parseFeedback(raw: unknown, now = new Date()): FeedbackEntry | string {

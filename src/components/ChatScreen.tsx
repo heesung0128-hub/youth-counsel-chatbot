@@ -19,6 +19,7 @@ import { CounselorId, ChatMessage, RiskLevel } from '../types';
 import { COUNSELOR_PROFILES } from '../config/promptConfig';
 import { EMERGENCY_HOTLINES, CRISIS_MESSAGES } from '../config/crisisConfig';
 import { REFERRAL_CONFIG } from '../config/referralConfig';
+import { detectPersonalInfo, PERSONAL_INFO_LABELS, type PersonalInfoKind } from '../utils/personalInfo';
 import { CounselorAvatar } from './CounselorAvatar';
 import { PWAInstallButton } from './PWAInstallButton';
 import {
@@ -56,6 +57,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   onOpenReferralDetails,
 }) => {
   const [inputText, setInputText] = useState('');
+  // 개인정보로 보이는 내용이 있을 때 보내기 전 확인 (확인한 문장은 그대로 보냄)
+  const [privacyWarning, setPrivacyWarning] = useState<{ text: string; kinds: PersonalInfoKind[] } | null>(null);
   const [showCrisisDetails, setShowCrisisDetails] = useState(false);
   const [soundOn, setSoundOn] = useState<boolean>(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -94,13 +97,23 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     scrollToBottom('smooth');
   }, [messages.length, isLoading]);
 
+  const sendNow = (text: string) => {
+    playSendSoftSound();
+    onSendMessage(text);
+    setInputText('');
+    setPrivacyWarning(null);
+  };
+
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const trimmed = inputText.trim();
     if (!trimmed || isLoading) return;
-    playSendSoftSound();
-    onSendMessage(trimmed);
-    setInputText('');
+    const kinds = detectPersonalInfo(trimmed);
+    if (kinds.length > 0 && privacyWarning?.text !== trimmed) {
+      setPrivacyWarning({ text: trimmed, kinds });
+      return;
+    }
+    sendNow(trimmed);
   };
 
   const handleKeywordClick = (keyword: string) => {
@@ -270,7 +283,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         {/* Subtle Top Notice for Trust */}
         <div className="flex justify-center my-1">
           <span className="px-3 py-1 rounded-full bg-white/50 backdrop-blur-xs text-[11px] text-[#4F6F81] font-medium shadow-2xs border border-white/40">
-            🔒 로그인 없는 기기 내 안전 보관 · 어떤 고민이든 소중해요
+            🔒 이름·학교·연락처는 쓰지 마세요 · 기록은 이 기기에만 저장돼요
           </span>
         </div>
 
@@ -407,11 +420,41 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           - 오른쪽 끝 안쪽에 원형 전송 버튼(▶ 재생 모양 아이콘)
          ======================================================== */}
       <footer className="shrink-0 px-3.5 sm:px-4 pb-4 pt-0">
+        {/* 개인정보 경고: 보내기 전에 한 번 확인 */}
+        {privacyWarning && (
+          <div role="alert" className="mb-2 p-3 rounded-2xl bg-[#FFF4E5] border border-[#FFD8A8] text-xs text-[#7A4B00] shadow-2xs">
+            <p className="font-bold">
+              {privacyWarning.kinds.map((k) => PERSONAL_INFO_LABELS[k]).join(', ')}처럼 보이는 내용이 있어요.
+            </p>
+            <p className="mt-0.5 text-[11px] text-[#8A5A0F]">
+              개인정보는 지우고 보내는 게 안전해요. 전화번호·이메일은 서버에서도 가려져요.
+            </p>
+            <div className="mt-2 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPrivacyWarning(null)}
+                className="flex-1 py-1.5 rounded-xl bg-white border border-[#FFD8A8] font-bold text-[#7A4B00] cursor-pointer"
+              >
+                고칠게요
+              </button>
+              <button
+                type="button"
+                onClick={() => sendNow(privacyWarning.text)}
+                className="flex-1 py-1.5 rounded-xl bg-[#F2B21B]/20 hover:bg-[#F2B21B]/30 font-bold text-[#7A4B00] cursor-pointer"
+              >
+                그대로 보내기
+              </button>
+            </div>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="relative flex items-center">
           <input
             type="text"
             value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
+            onChange={(e) => {
+              setInputText(e.target.value);
+              if (privacyWarning) setPrivacyWarning(null);
+            }}
             disabled={isLoading}
             placeholder="편하게 이야기해 주세요"
             className="w-full h-13 pl-5 pr-14 rounded-full bg-white text-[#3A3A3A] placeholder-[#8EA8B8] text-sm sm:text-base shadow-md border-2 border-white focus:outline-hidden focus:border-[#7CC6EA] transition disabled:bg-slate-50"

@@ -24853,6 +24853,12 @@ function evaluateConversationRisk(current, history) {
   return { riskLevel: "safe", needsSafetyCheck: false };
 }
 
+// src/utils/personalInfo.ts
+function maskPersonalInfo(text) {
+  if (!text) return text;
+  return text.replace(/0\d{1,2}[-\s.]?\d{3,4}[-\s.]?\d{4}/g, "[\uAC00\uB9BC]").replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, "[\uAC00\uB9BC]").replace(/\d+\s*동\s*\d+\s*호/g, "[\uAC00\uB9BC]").replace(/\d{6,}/g, "[\uAC00\uB9BC]");
+}
+
 // server/rateLimit.ts
 var import_ratelimit = __toESM(require_dist2(), 1);
 
@@ -54843,14 +54849,15 @@ async function processChat(rawBody, clientIp = "unknown") {
     const profile = COUNSELOR_PROFILES[validCounselorId];
     const recentHistory = Array.isArray(conversationHistory) ? conversationHistory.slice(-MAX_HISTORY_TURNS).map((m2) => ({
       role: m2?.sender === "user" ? "user" : "assistant",
-      text: String(m2?.text || "").slice(0, MAX_MESSAGE_LENGTH)
+      // 전화번호·이메일 등은 AI 서비스로 보내기 전에 가림
+      text: maskPersonalInfo(String(m2?.text || "").slice(0, MAX_MESSAGE_LENGTH))
     })) : [];
     const dynamicSystemPrompt = buildSystemPrompt(validCounselorId);
     const responseText = await withOverloadRetry(
       (signal) => generateReply({
         system: dynamicSystemPrompt,
         history: recentHistory,
-        userText: `\uD559\uC0DD\uC758 \uBA54\uC2DC\uC9C0: "${cleanMessage}"
+        userText: `\uD559\uC0DD\uC758 \uBA54\uC2DC\uC9C0: "${maskPersonalInfo(cleanMessage)}"
 \uC774 \uD559\uC0DD\uC758 \uACE0\uBBFC\uC744 \uACBD\uCCAD\uD558\uACE0 \uCC28\uBD84\uD558\uAC8C \uB9C8\uC74C\uC744 \uC815\uB9AC\uD560 \uC218 \uC788\uB3C4\uB85D \uC751\uB2F5\uC744 JSON \uD615\uC2DD\uC73C\uB85C \uC791\uC131\uD574 \uC918.`,
         signal
       }),
