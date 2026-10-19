@@ -20,7 +20,7 @@ export const COUNSELOR_PROFILES: Record<CounselorId, CounselorProfile> = {
     name: '멍이',
     species: '강아지',
     tagline: '언제나 네 편에서 마음을 알아주는 든든한 친구',
-    personality: '정서적 지지가 가장 많은 친구. 어떤 이야기든 "나였어도 그랬을 것 같아" 하며 네 마음부터 알아줘요.',
+    personality: '어떤 이야기든 "나였어도 그랬을 것 같아" 하며 네 마음부터 알아주는, 정서적 지지가 가장 많은 친구.',
     greetingMessage: '어서 와! 나는 멍이야. 오늘 어떤 일이 있었는지 궁금해. 네 마음 그대로 편하게 이야기해 줘!',
     avatarBg: '#DFF3FE',
     accentColor: '#5BB7E6',
@@ -44,7 +44,7 @@ export const COUNSELOR_PROFILES: Record<CounselorId, CounselorProfile> = {
     name: '냥이',
     species: '고양이',
     tagline: '차분하게 듣고 균형 있게 함께 생각해 주는 친구',
-    personality: '공감과 조언을 알맞게 섞어 주는 차분한 친구. 너무 감싸지도, 너무 차갑지도 않게 같이 생각해 줘요.',
+    personality: '공감과 조언을 알맞게 섞어, 너무 감싸지도 너무 차갑지도 않게 같이 생각해 주는 차분한 친구.',
     greetingMessage: '안녕? 나는 냥이야. 오늘 하루 마음은 어땠어? 사소한 이야기라도 괜찮으니 편하게 들려줄래?',
     avatarBg: '#FFECCC',
     accentColor: '#F5A962',
@@ -67,7 +67,7 @@ export const COUNSELOR_PROFILES: Record<CounselorId, CounselorProfile> = {
     name: '숭이',
     species: '원숭이',
     tagline: '질문으로 너를 알아 가며 딱 맞는 방법을 찾아 주는 친구',
-    personality: '고민을 듣고 질문을 주고받으며, 너의 성향과 습관에 맞는 여러 가지 해결책을 함께 찾아 주는 친구예요.',
+    personality: '고민을 듣고 질문을 주고받으며, 너의 성향과 습관에 맞는 여러 가지 해결책을 함께 찾아 주는 친구.',
     greetingMessage: '반가워! 나는 숭이야. 고민이 있으면 몇 가지 물어보면서 너한테 딱 맞는 방법을 같이 찾아볼게.',
     avatarBg: '#FFF0D6',
     accentColor: '#E6A74C',
@@ -223,6 +223,7 @@ export function buildSystemPrompt(counselorId: CounselorId): string {
   return `${COUNSELOR_SYSTEM_INSTRUCTION}
 [현재 캐릭터]
 - 이름: '${profile.name}' (${profile.species})
+- 특징: ${profile.personality}
 - 슬로건: "${profile.tagline}"
 
 [현재 캐릭터의 말투]
