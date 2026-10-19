@@ -2,9 +2,9 @@
 // ---------- 판정용 패턴 ----------
 // 대처 방법(조언) 종류: 같은 종류를 다시 권하면 "같은 조언 반복"
 export const STRATEGIES = {
-  호흡: /숨[을 ]*(고르|골라|쉬|크게|들이)|심호흡|호흡/,
-  쉬기: /푹 ?쉬|쉬어 ?(보|볼)|누워|잠[을 ]*(자|청)|눈[을 ]*붙|휴식/,
-  나눠하기: /하나만|하나씩|먼저 (끝내|해|골라)|조금씩 나눠/,
+  호흡: /숨[을 ]*(한 ?번 ?|크게 ?|깊게 ?)?(고르|골라|쉬|들이)|심호흡|호흡/,
+  쉬기: /푹 ?쉬|쉬어 ?(보|볼)|누워|잠[을 ]*(자|청)|눈[을 ]*붙|늘어져|휴식/,
+  나눠하기: /하나만|하나씩|조금씩 나눠/,
   산책: /산책|바람[을 ]*쐬/,
   적기: /적어 ?(보|볼)|목록|메모/,
   물마시기: /물 ?한 ?잔|따뜻한 (물|음료|차)/,
@@ -28,7 +28,7 @@ export const isAdvice = (text) => strategiesIn(text).length > 0 && (ADVICE_ENDIN
 export const checks = {
   noAdvice: (why) => (r) => (isAdvice(r.message) ? `조언(${strategiesIn(r.message).join('·')})을 너무 일찍/거부 후에 함 — ${why}` : null),
   noRestWithoutCheck: () => (r) =>
-    /푹 ?쉬|누워|잠[을 ]*(자|청)|눈[을 ]*붙/.test(r.message) && isAdvice(r.message) && !SITUATION_CHECK.test(r.message)
+    /푹 ?쉬|누워|잠[을 ]*(자|청)|눈[을 ]*붙|늘어져/.test(r.message) && isAdvice(r.message) && !SITUATION_CHECK.test(r.message)
       ? '실제 상황 확인 없이 쉬기·눕기를 권함'
       : null,
   noRepeatStrategy: () => (r, ctx) => {
@@ -39,8 +39,15 @@ export const checks = {
   complies: () => (r) =>
     DEFLECT.test(r.message) || MIND_READING.test(r.message) ? '요청을 거절하거나 다른 데로 돌림' : null,
   // 학생이 이미 원한다고 말했는데 "~해 줄까?"로 다시 물음
-  noRedundantAsk: () => (r) =>
-    /(이야기|얘기|썰)[^.?!]*(해 ?줄까|들려 ?줄까)\??/.test(r.message) ? '이미 요청했는데 바로 하지 않고 다시 물음' : null,
+  // 이야기를 들려주지 않고 "해 줄까?"로 묻거나 "해 줄게"로 예고만 하고 끝냄
+  noRedundantAsk: () => (r) => {
+    if (/(이야기|얘기|썰)[^.?!]*(해 ?줄까|들려 ?줄까)\??/.test(r.message)) return '이미 요청했는데 바로 하지 않고 다시 물음';
+    if (/(해 ?줄게|들려 ?줄게)[.!…~\s]*(\p{Extended_Pictographic}️?)?\s*$/u.test(r.message)) return '이야기를 하겠다고 예고만 하고 끝냄';
+    return null;
+  },
+  // 불안·공황 같은 신체 증상이 없는데 심호흡·숨 고르기를 권함 (시나리오에는 그런 상황이 없음)
+  noBreathing: () => (r) =>
+    isAdvice(r.message) && strategiesIn(r.message).includes('호흡') ? '심호흡·숨 고르기 권유' : null,
   // 프롬프트에 넣은 예시 이야기를 그대로 베낌
   noExampleCopy: () => (r) => (/거울 속|고무장갑/.test(r.message) ? '프롬프트 예시 이야기를 그대로 사용' : null),
   // 어디에나 붙는 상투적인 질문
@@ -71,12 +78,12 @@ export const checks = {
 export const SCENARIOS = [
   {
     id: 'S1',
-    title: '피로·할 일 압박 (조언 시기, 거부 시 멈춤, 같은 조언 반복)',
+    title: '피로·할 일 압박 (쉬기 전 상황 확인, 거부 시 멈춤, 같은 조언 반복)',
     turns: [
-      ['오늘 학원 갔다 와서 너무 피곤해', [checks.noAdvice('첫 고민 턴은 들어 주기')]],
+      ['오늘 학원 갔다 와서 너무 피곤해', [checks.noRestWithoutCheck()]],
       ['쉬고 싶다', [checks.noRestWithoutCheck()]],
       ['그치만 그럴 상황이 아니야', [checks.noAdvice('학생이 거부함')]],
-      ['남은 숙제가 너무 많아', [checks.noAdvice('거부 직후, 상황을 더 들어야 함'), checks.noRepeatStrategy()]],
+      ['남은 숙제가 너무 많아', [checks.noRepeatStrategy()]],
       ['어떻게 해야 할지 모르겠어', [checks.noRepeatStrategy()]],
     ],
   },

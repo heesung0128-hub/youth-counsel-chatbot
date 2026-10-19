@@ -85,3 +85,18 @@ test('parroting and stock questions are flagged (개선사항 문서 사례)', (
   );
   assert.equal(checks.noClicheQuestion()({ message: '마감이 제일 가까운 과목은 뭐야?' }), null);
 });
+
+test('announcing a story without telling it is flagged (실제 응답)', () => {
+  const check = checks.noRedundantAsk();
+  assert.ok(run(check, '재밌는 이야기를 또 듣고 싶었구나… 그럼 숭이가 나무에 올라갔다가 내려오지 못해서 바나나로 유혹했던 이야기 해 줄게 🌙'));
+  assert.ok(run(check, '웃고 싶었구나! 멍이가 어제 산책하다가 나비 쫓아가다가 바닥에 꽈당 넘어진 이야기 해 줄까?'));
+  assert.equal(run(check, '좋아, 하나 해 줄게! 멍이가 어제 꼬리 잡으려다 빙글빙글 돌다가 소파에 콕 박혔어.'), null);
+});
+
+test('rest advice without a situation check and breathing advice are flagged (실제 응답)', () => {
+  assert.ok(run(checks.noRestWithoutCheck(), '학원까지 다녀오느라 힘들었겠어… 일단 씻고 잠시 아무것도 안 하고 늘어져 있는 시간부터 만들어 볼까? 🐾'));
+  assert.ok(run(checks.noRestWithoutCheck(), '오늘은 가방 먼저 내려놓고 아무 생각 없이 누워 볼까? 🐶'));
+  assert.equal(run(checks.noRestWithoutCheck(), '많이 지쳤겠다. 지금 쉴 수 있는 상황이야?'), null);
+  assert.ok(run(checks.noBreathing(), '머릿속이 복잡하겠구나… 천천히 숨 한 번 쉬고 이야기해 보자.'));
+  assert.equal(run(checks.noBreathing(), '마감이 제일 빠른 게 뭔지부터 같이 볼래?'), null);
+});

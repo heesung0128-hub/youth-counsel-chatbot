@@ -68,7 +68,7 @@ for (const scenario of SCENARIOS.filter((s) => !ONLY.length || ONLY.includes(s.i
     for (const [userMessage, turnChecks] of scenario.turns) {
       ctx.userMessage = userMessage;
       const r = await send(counselorId, userMessage, history);
-      const issues = [...turnChecks, checks.banmal(), checks.noClicheQuestion(), checks.noParrot()].map((c) => c(r, ctx)).filter(Boolean);
+      const issues = [...turnChecks, checks.banmal(), checks.noClicheQuestion(), checks.noParrot(), checks.noBreathing()].map((c) => c(r, ctx)).filter(Boolean);
       if (['local_engine', 'fallback_recovery', 'rate_limited'].includes(r.source)) {
         issues.push(`AI가 아닌 내장 응답(source=${r.source}${r.fallbackReason ? '/' + r.fallbackReason : ''}) — 판정 제외 권장`);
       }

@@ -82,3 +82,10 @@ test('prompt has no concrete example stories that models tend to copy', () => {
     for (const phrase of ['거울 속', '고무장갑']) assert.ok(!prompt.includes(phrase), `${id}: ${phrase}`);
   }
 });
+
+test('[바로 응하기] shows a format-only good example and the rest-check rule', () => {
+  const prompt = buildSystemPrompt('cat');
+  assert.ok(prompt.includes('좋은 예(형식만)'));
+  assert.ok(prompt.includes('해 주겠다고만 하고 이야기 내용이 없음'));
+  assert.ok(prompt.includes('"지금 쉴 수 있는 상황이야?"'));
+});
