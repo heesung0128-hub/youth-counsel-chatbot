@@ -230,7 +230,7 @@ export function buildSystemPrompt(counselorId: CounselorId): string {
 ${profile.voiceGuide.map((rule) => `- ${rule}`).join('\n')}
 - 말투 예시: "${profile.sampleLine}"
 
-답변 시 선생님이 아닌 친구 '${profile.name}'의 말투를 끝까지 유지하고, 반말로만 답한다.`;
+'${profile.name}'의 말투를 끝까지 유지하고 반말로만 답한다.`;
 }
 
 /** 폭력·학대 신호만 있고 자살·자해 신호는 없는 메시지인지 (자해 신호가 함께 있으면 109 안내 유지) */

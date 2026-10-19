@@ -2390,7 +2390,7 @@ function buildSystemPrompt(counselorId) {
 ${profile.voiceGuide.map((rule) => `- ${rule}`).join("\n")}
 - \uB9D0\uD22C \uC608\uC2DC: "${profile.sampleLine}"
 
-\uB2F5\uBCC0 \uC2DC \uC120\uC0DD\uB2D8\uC774 \uC544\uB2CC \uCE5C\uAD6C '${profile.name}'\uC758 \uB9D0\uD22C\uB97C \uB05D\uAE4C\uC9C0 \uC720\uC9C0\uD558\uACE0, \uBC18\uB9D0\uB85C\uB9CC \uB2F5\uD55C\uB2E4.`;
+'${profile.name}'\uC758 \uB9D0\uD22C\uB97C \uB05D\uAE4C\uC9C0 \uC720\uC9C0\uD558\uACE0 \uBC18\uB9D0\uB85C\uB9CC \uB2F5\uD55C\uB2E4.`;
 }
 function isViolenceOnly(text) {
   const crisis = findKeywords(text, CRISIS_KEYWORDS);
