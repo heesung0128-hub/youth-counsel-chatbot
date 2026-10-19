@@ -14,8 +14,7 @@ import { ReferralOrg } from '../types';
  * * 입력 규칙:
  *   - 대괄호 [ ] 로 감싼 값(예: '[기관 공식 협약 연락처 시범운영 시 입력]')은 학생 화면에 표시되지 않습니다.
  *     확정되면 대괄호 없이 실제 값을 넣으면 바로 표시됩니다.
- *   - stage2.status 가 'active' 일 때만 2단계 "익명 상담 연결" 버튼이 나타납니다.
- *     그 전에는 연결 버튼 대신 청소년상담 1388 익명 상담 안내가 표시됩니다.
+ *   - 2단계는 청소년상담 1388(비대면 상담)로 안내합니다. 링크·운영시간·상담 방법은 stage2에서 바꿀 수 있습니다.
  */
 
 export interface SteppedReferralInfo {
@@ -27,10 +26,13 @@ export interface SteppedReferralInfo {
   stage2: {
     title: string;
     description: string;
-    anonymousChannelTitle: string;
-    anonymousChannelNotice: string;
+    serviceName: string;
+    siteUrl: string;
+    hours: string;
+    channels: string[];
+    howToUse: string;
+    confidentiality: string;
     consentMessage: string;
-    status: 'ready_for_pilot' | 'active';
   };
   stage3: {
     title: string;
@@ -47,12 +49,15 @@ export const REFERRAL_CONFIG: SteppedReferralInfo = {
     privacy: '이름이나 학번 없이 기기 내에서 안전하게 익명으로 보호됩니다.',
   },
   stage2: {
-    title: '2단계: 실제 전문 상담사와 익명 비대면 상담',
-    description: 'AI와의 대화로 마음이 다 풀리지 않거나 전문적인 조언이 필요할 때, 학생의 신원을 밝히지 않고 비대면 채팅으로 전문 상담사와 연결됩니다.',
-    anonymousChannelTitle: '서초 청소년 1:1 익명 비대면 상담 창구 (시범운영 준비 중)',
-    anonymousChannelNotice: '※ 시범운영 개시 시 서초구 청소년상담복지센터 및 교내 상담실과 연계된 전용 익명 메신저로 연결됩니다.',
-    consentMessage: '학생 본인이 "연결 동의"를 누를 때만 시작되며, 개인정보는 상담사에게 전달되지 않습니다.',
-    status: 'ready_for_pilot',
+    title: '2단계: 청소년상담 1388 비대면 상담',
+    description: '청소년의 다양한 고민을 전문 상담자와 비대면으로 상담할 수 있는 창구예요.',
+    serviceName: '청소년상담 1388',
+    siteUrl: 'https://www.1388.go.kr/cco/YTOSP_SC_CCI_01',
+    hours: '365일 24시간 연중무휴',
+    channels: ['사이트 내 상담실', '전화 1388', '문자 #1388', '카카오톡', '페이스북', '라인', '인스타그램'],
+    howToUse: '아래 버튼으로 1388 사이트에 들어가 상담실에서 상담을 시작하거나, 전화·문자·카카오톡 등 편한 방법을 골라 연락하면 돼요.',
+    confidentiality: '상담 내용은 비밀이 보장돼요. 다만 자살 등 생명이 위험한 상황이라고 판단되면, 너를 지키기 위해 관련 기관과 연계될 수 있어요.',
+    consentMessage: '버튼을 누르면 청소년상담 1388 공식 사이트(외부)로 이동해요. 이 앱에서 나눈 대화는 전달되지 않아요.',
   },
   stage3: {
     title: '3단계: 교내 Wee클래스 및 서초구 전문기관 연계',

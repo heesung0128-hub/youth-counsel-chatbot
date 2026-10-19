@@ -12,6 +12,7 @@ import {
   ExternalLink,
   MessageSquare,
   Volume2,
+  Star,
   VolumeX,
 } from 'lucide-react';
 import { CounselorId, ChatMessage, RiskLevel } from '../types';
@@ -37,6 +38,7 @@ interface ChatScreenProps {
   suggestedKeywords: [string, string, string];
   activeCrisisLevel: RiskLevel;
   onDismissCrisisBanner?: () => void;
+  onOpenFeedback?: () => void;
   onOpenReferralDetails: (stage: 2 | 3) => void;
 }
 
@@ -50,6 +52,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   suggestedKeywords,
   activeCrisisLevel,
   onDismissCrisisBanner,
+  onOpenFeedback,
   onOpenReferralDetails,
 }) => {
   const [inputText, setInputText] = useState('');
@@ -131,7 +134,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                 {isLoading ? '생각하는 중…' : counselorProfile.badge}
               </span>
             </div>
-            <span className="text-[11px] text-[#527385] leading-none mt-0.5 font-medium">
+            <span className="text-[11px] text-[#527385] leading-none mt-0.5 font-medium whitespace-nowrap truncate max-w-[9.5rem]">
               {isLoading ? '네 이야기를 소중히 정리하고 있어' : '항상 네 편에서 들어줄게'}
             </span>
           </div>
@@ -160,6 +163,19 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           </button>
 
           <PWAInstallButton />
+
+          {/* ★ 피드백 (개선할 점·좋은 점) */}
+          {onOpenFeedback && (
+            <button
+              type="button"
+              onClick={onOpenFeedback}
+              title="의견 보내기 (개선할 점 · 좋은 점)"
+              aria-label="의견 보내기"
+              className="w-8.5 h-8.5 rounded-full bg-white/70 hover:bg-white flex items-center justify-center shadow-2xs border border-white/60 transition cursor-pointer"
+            >
+              <Star className="w-4 h-4 text-[#F2B21B]" />
+            </button>
+          )}
 
           {/* Circular "?" Button */}
           <button
@@ -192,13 +208,29 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setShowCrisisDetails(!showCrisisDetails)}
-              className="px-2 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-[11px] font-bold text-white shrink-0 cursor-pointer"
-            >
-              {showCrisisDetails ? '접기' : '긴급전화'}
-            </button>
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowCrisisDetails(!showCrisisDetails)}
+                className="px-2 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-[11px] font-bold text-white cursor-pointer"
+              >
+                {showCrisisDetails ? '접기' : '긴급전화'}
+              </button>
+              {onDismissCrisisBanner && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCrisisDetails(false);
+                    onDismissCrisisBanner();
+                  }}
+                  aria-label="긴급 안내 닫기"
+                  title="닫기 (도움말 ?에서 언제든 다시 볼 수 있어요)"
+                  className="w-6 h-6 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5 text-white" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Expandable Emergency Hotlines */}
@@ -279,22 +311,15 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                       <div className="mt-3 pt-2.5 border-t border-[#F2DE82]/80 flex flex-col gap-2">
                         <div className="flex items-center gap-1.5 text-xs font-bold text-[#6D5409]">
                           <HeartHandshake className="w-4 h-4 text-[#C98B00]" />
-                          <span>
-                            {msg.referralStage === 3
-                              ? '교내 Wee클래스 및 서초구 전문기관 연계 안내'
-                              : '실제 전문 상담 선생님과 익명 비대면 상담'}
-                          </span>
+                          <span>청소년상담 1388 · Wee클래스 안내</span>
                         </div>
                         <p className="text-xs text-[#6B5512] leading-snug">
-                          {msg.referralStage === 3
-                            ? '혼자 버티기 힘들 때는 학교와 서초구 전문 센터의 지지망을 연결할 수 있어요.'
-                            : REFERRAL_CONFIG.stage2.status === 'active'
-                              ? 'AI 챗봇 외에, 실제 사람 전문 상담사와 비밀 보장 익명 채팅으로 이야기해볼 수 있어요.'
-                              : '실제 상담 선생님과 이야기하고 싶다면, 청소년상담 1388(전화·문자·카카오톡)에서 익명으로 상담할 수 있어요.'}
+                          {REFERRAL_CONFIG.stage2.description} ({REFERRAL_CONFIG.stage2.serviceName},{' '}
+                          {REFERRAL_CONFIG.stage2.hours}) 학교 안에서는 Wee클래스 선생님을 만날 수 있어요.
                         </p>
                         <button
                           type="button"
-                          onClick={() => onOpenReferralDetails(msg.referralStage || 2)}
+                          onClick={() => onOpenReferralDetails(2)}
                           className="mt-1 py-1.5 px-3 rounded-xl bg-white hover:bg-[#FFF9DB] text-xs font-bold text-[#574204] shadow-2xs border border-[#F0DC82] flex items-center justify-between transition cursor-pointer"
                         >
                           <span>자세히 보고 동의 후 연결하기</span>

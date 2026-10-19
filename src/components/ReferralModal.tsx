@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
-import { X, ShieldCheck, HeartHandshake, Phone, Clock, MapPin, Check, AlertCircle, Sparkles } from 'lucide-react';
+import { X, ShieldCheck, HeartHandshake, Phone, Clock, MapPin, ExternalLink } from 'lucide-react';
 import { REFERRAL_CONFIG } from '../config/referralConfig';
 import { ReferralOrg } from '../types';
 import { displayValue, isPlaceholder } from '../utils/referralDisplay';
-
-// 2단계 익명 상담 창구가 실제 운영 중일 때만 연결 동의/요청 버튼을 노출
-const isStage2Active = REFERRAL_CONFIG.stage2.status === 'active';
 
 interface ReferralModalProps {
   isOpen: boolean;
@@ -20,14 +17,9 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({
 }) => {
   const [selectedStage, setSelectedStage] = useState<2 | 3>(initialStage);
   const [hasAgreed, setHasAgreed] = useState(false);
-  const [connectionRequested, setConnectionRequested] = useState(false);
+  const stage2 = REFERRAL_CONFIG.stage2;
 
   if (!isOpen) return null;
-
-  const handleAgreeAndConnect = () => {
-    if (!hasAgreed) return;
-    setConnectionRequested(true);
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-xs">
@@ -57,24 +49,18 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({
         <div className="grid grid-cols-2 p-1.5 bg-[#F0F7FB] border-b border-[#E1EFF7] text-xs font-semibold shrink-0">
           <button
             type="button"
-            onClick={() => {
-              setSelectedStage(2);
-              setConnectionRequested(false);
-            }}
+            onClick={() => setSelectedStage(2)}
             className={`py-2 rounded-xl transition cursor-pointer ${
               selectedStage === 2
                 ? 'bg-white text-[#1E3B4B] shadow-xs'
                 : 'text-[#638497] hover:text-[#1E3B4B]'
             }`}
           >
-            2단계: 비대면 익명 상담
+            2단계: 1388 비대면 상담
           </button>
           <button
             type="button"
-            onClick={() => {
-              setSelectedStage(3);
-              setConnectionRequested(false);
-            }}
+            onClick={() => setSelectedStage(3)}
             className={`py-2 rounded-xl transition cursor-pointer ${
               selectedStage === 3
                 ? 'bg-white text-[#1E3B4B] shadow-xs'
@@ -88,99 +74,74 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({
         {/* Content Body */}
         <div className="p-4 sm:p-5 overflow-y-auto space-y-4 text-xs sm:text-sm text-[#384E5B] leading-relaxed">
           {selectedStage === 2 ? (
-            /* Stage 2 Content */
+            /* Stage 2 Content: 청소년상담 1388 이용 안내 */
             <div className="space-y-4">
               <div className="p-4 rounded-2xl bg-[#FFF9E6] border border-[#FFE7A3]">
                 <span className="px-2 py-0.5 rounded-full bg-[#FFE082] text-[#694E03] text-[10px] font-bold">
-                  2단계 비대면 연계
+                  2단계 비대면 연계 안내
                 </span>
-                <h3 className="text-sm font-bold text-[#2A2300] mt-1.5">
-                  {REFERRAL_CONFIG.stage2.title}
-                </h3>
-                <p className="text-xs text-[#635520] mt-1 leading-relaxed">
-                  {REFERRAL_CONFIG.stage2.description}
-                </p>
+                <h3 className="text-sm font-bold text-[#2A2300] mt-1.5">{stage2.title}</h3>
+                <p className="text-xs text-[#635520] mt-1 leading-relaxed">{stage2.description}</p>
               </div>
 
-              {isStage2Active && (
-                <div className="p-3.5 rounded-2xl bg-[#F6FAFD] border border-[#E1EFF8] space-y-2">
-                  <h4 className="text-xs font-bold text-[#1E3A4B] flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-[#5BB7E6]" />
-                    안내 및 개인정보 처리 원칙
-                  </h4>
-                  <ul className="text-xs text-[#527081] space-y-1 list-disc list-inside">
-                    <li>학생의 이름, 연락처, 학번을 요구하지 않는 <strong>익명 채팅</strong>으로 진행됩니다.</li>
-                    <li>상담사는 청소년 전문 상담 자격을 갖춘 선생님이 배정됩니다.</li>
-                    <li>대화 중 언제든 학생이 원할 때 상담을 종료할 수 있습니다.</li>
-                  </ul>
+              <div className="p-3.5 rounded-2xl bg-[#F6FAFD] border border-[#E1EFF8] space-y-2.5">
+                <h4 className="text-xs font-bold text-[#1E3A4B]">{stage2.serviceName} 이용 안내</h4>
+                <div className="flex items-center gap-1.5 text-xs text-[#384E5B]">
+                  <Clock className="w-3.5 h-3.5 text-[#5BB7E6] shrink-0" />
+                  <span>{stage2.hours}</span>
                 </div>
-              )}
-
-              {/* Status Notice */}
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-[#527081]">
-                <strong className="block text-[#273E4D] mb-0.5">
-                  {REFERRAL_CONFIG.stage2.anonymousChannelTitle}
-                </strong>
-                {REFERRAL_CONFIG.stage2.anonymousChannelNotice}
-              </div>
-
-              {!isStage2Active ? (
-                /* 운영 전: 가짜 "연결 요청 완료" 대신 지금 바로 이용 가능한 익명 상담 안내 */
-                <div className="p-4 rounded-2xl bg-[#EAF5FC] border border-[#D5ECF8] space-y-2.5">
-                  <h4 className="text-sm font-bold text-[#1E3A4B]">
-                    지금 바로 익명으로 상담받고 싶다면
-                  </h4>
-                  <p className="text-xs text-[#527081] leading-relaxed">
-                    이 창구는 아직 열리지 않았어요. 대신 <strong>청소년상담 1388</strong>에서 이름을 밝히지 않고
-                    24시간 전문 상담 선생님과 이야기할 수 있어요.
-                  </p>
-                  <ul className="text-xs text-[#384E5B] space-y-1">
-                    <li>📞 전화: 1388</li>
-                    <li>💬 문자: #1388</li>
-                    <li>🟡 카카오톡: 채널 [청소년상담1388] 검색</li>
-                  </ul>
-                  <a
-                    href="tel:1388"
-                    className="block w-full py-2.5 px-4 rounded-xl font-bold text-xs text-center text-white bg-[#5BB7E6] hover:bg-[#48A8D8] shadow-xs transition"
-                  >
-                    1388에 전화하기
-                  </a>
-                </div>
-              ) : connectionRequested ? (
-                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-center animate-in fade-in">
-                  <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-2">
-                    <Check className="w-5 h-5" />
-                  </div>
-                  <h4 className="text-sm font-bold text-emerald-900">익명 상담 연결 요청 완료</h4>
-                  <p className="text-xs text-emerald-700 mt-1">
-                    시범 운영 준비가 완료되면 이 창구를 통해 실제 상담 선생님과의 1:1 익명 대화방으로 연결됩니다.
-                  </p>
-                </div>
-              ) : (
-                /* Consent Agreement Section */
-                <div className="p-4 rounded-2xl bg-[#EAF5FC] border border-[#D5ECF8] space-y-3">
-                  <label className="flex items-start gap-2.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={hasAgreed}
-                      onChange={(e) => setHasAgreed(e.target.checked)}
-                      className="mt-0.5 w-4 h-4 rounded text-[#5BB7E6] focus:ring-[#7CC6EA]"
-                    />
-                    <span className="text-xs text-[#203D4E] font-medium leading-relaxed">
-                      [필수 동의] 상담의 목적과 익명 처리 방식을 확인하였으며, 실제 전문 상담사와의 비대면 익명 상담 연결에 동의합니다.
+                <div className="flex flex-wrap gap-1.5">
+                  {stage2.channels.map((channel) => (
+                    <span
+                      key={channel}
+                      className="px-2 py-0.5 rounded-full bg-white border border-[#D5ECF8] text-[11px] text-[#2A4758]"
+                    >
+                      {channel}
                     </span>
-                  </label>
-
-                  <button
-                    type="button"
-                    onClick={handleAgreeAndConnect}
-                    disabled={!hasAgreed}
-                    className="w-full py-2.5 px-4 rounded-xl font-bold text-xs text-white bg-[#5BB7E6] hover:bg-[#48A8D8] disabled:opacity-40 disabled:cursor-not-allowed shadow-xs transition cursor-pointer"
-                  >
-                    전문 상담사와 익명 상담 시작하기
-                  </button>
+                  ))}
                 </div>
-              )}
+                <p className="text-xs text-[#527081] leading-relaxed">{stage2.howToUse}</p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-[#527081] flex gap-2">
+                <ShieldCheck className="w-4 h-4 text-[#5BB7E6] shrink-0 mt-0.5" />
+                <span>{stage2.confidentiality}</span>
+              </div>
+
+              {/* 동의 후 연결: 외부 사이트 이동 안내 확인 → 링크 활성화 (전화는 언제나 바로 가능) */}
+              <div className="p-4 rounded-2xl bg-[#EAF5FC] border border-[#D5ECF8] space-y-3">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={hasAgreed}
+                    onChange={(e) => setHasAgreed(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded text-[#5BB7E6] focus:ring-[#7CC6EA]"
+                  />
+                  <span className="text-xs text-[#203D4E] font-medium leading-relaxed">{stage2.consentMessage}</span>
+                </label>
+                <a
+                  href={hasAgreed ? stage2.siteUrl : undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-disabled={!hasAgreed}
+                  onClick={(e) => {
+                    if (!hasAgreed) e.preventDefault();
+                  }}
+                  className={`flex items-center justify-center gap-1.5 w-full py-2.5 px-4 rounded-xl font-bold text-xs text-white shadow-xs transition ${
+                    hasAgreed ? 'bg-[#5BB7E6] hover:bg-[#48A8D8]' : 'bg-[#5BB7E6]/40 cursor-not-allowed'
+                  }`}
+                >
+                  1388 온라인 상담 바로가기
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+                <a
+                  href="tel:1388"
+                  className="flex items-center justify-center gap-1.5 w-full py-2 px-4 rounded-xl font-bold text-xs text-[#2A4758] bg-white border border-[#D5ECF8] hover:bg-[#F6FAFD] transition"
+                >
+                  <Phone className="w-3.5 h-3.5 text-[#5BB7E6]" />
+                  지금 바로 1388에 전화하기
+                </a>
+              </div>
             </div>
           ) : (
             /* Stage 3 Content: Organizations list */

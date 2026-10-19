@@ -43,6 +43,18 @@ export const checks = {
     /(이야기|얘기|썰)[^.?!]*(해 ?줄까|들려 ?줄까)\??/.test(r.message) ? '이미 요청했는데 바로 하지 않고 다시 물음' : null,
   // 프롬프트에 넣은 예시 이야기를 그대로 베낌
   noExampleCopy: () => (r) => (/거울 속|고무장갑/.test(r.message) ? '프롬프트 예시 이야기를 그대로 사용' : null),
+  // 어디에나 붙는 상투적인 질문
+  noClicheQuestion: () => (r) =>
+    /(가장 걱정되는 (점|게)|편안했던 순간|어떤 기분이 가장 크게|마음속에 어떤 기분)/.test(r.message) ? '상투적인 질문' : null,
+  // 학생 말을 거의 그대로 되풀이한 뒤 바로 되묻기만 함
+  noParrot: () => (r, ctx) => {
+    const said = (ctx.userMessage || '').replace(/[\s.?!,~…]/g, '');
+    const sentences = r.message.split(/(?<=[.?!…])\s+/).filter(Boolean);
+    const first = (sentences[0] || '').replace(/[\s.?!,~…]/g, '');
+    if (said.length < 6 || sentences.length > 2 || !/\?\s*\S{0,3}$/.test(r.message)) return null;
+    for (let i = 0; i + 6 <= said.length; i++) if (first.includes(said.slice(i, i + 6))) return '학생 말을 따라 하고 바로 되묻기만 함';
+    return null;
+  },
   acceptsCorrection: () => (r) =>
     /(잘못|그랬구나|그렇구나|싶었구나|웃|알겠|좋아)/.test(r.message) && !MIND_READING.test(r.message)
       ? null

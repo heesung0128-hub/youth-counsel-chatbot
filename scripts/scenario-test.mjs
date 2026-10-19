@@ -34,7 +34,7 @@ const DELAY_MS = Number(opt('delay', '12000'));
 const GREETINGS = {
   cat: '안녕? 나는 냥이야. 오늘 하루 마음은 어땠어? 사소한 이야기라도 괜찮으니 편하게 들려줄래?',
   dog: '어서 와! 나는 멍이야. 오늘 어떤 일이 있었는지 궁금해. 네 마음 그대로 편하게 이야기해 줘!',
-  monkey: '반가워! 나는 몽이야. 머릿속이 복잡하거나 마음이 무거울 때, 우리 하나씩 천천히 풀어보자.',
+  monkey: '반가워! 나는 숭이야. 고민이 있으면 몇 가지 물어보면서 너한테 딱 맞는 방법을 같이 찾아볼게.',
 };
 
 import { checks, isAdvice, strategiesIn, SCENARIOS } from './scenario-checks.mjs';
@@ -66,8 +66,9 @@ for (const scenario of SCENARIOS.filter((s) => !ONLY.length || ONLY.includes(s.i
     const history = [{ sender: 'counselor', text: GREETINGS[counselorId] }];
     const ctx = { usedStrategies: new Set() };
     for (const [userMessage, turnChecks] of scenario.turns) {
+      ctx.userMessage = userMessage;
       const r = await send(counselorId, userMessage, history);
-      const issues = [...turnChecks, checks.banmal()].map((c) => c(r, ctx)).filter(Boolean);
+      const issues = [...turnChecks, checks.banmal(), checks.noClicheQuestion(), checks.noParrot()].map((c) => c(r, ctx)).filter(Boolean);
       if (['local_engine', 'fallback_recovery', 'rate_limited'].includes(r.source)) {
         issues.push(`AI가 아닌 내장 응답(source=${r.source}${r.fallbackReason ? '/' + r.fallbackReason : ''}) — 판정 제외 권장`);
       }

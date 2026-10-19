@@ -152,7 +152,7 @@ export const CounselorAvatar: React.FC<CounselorAvatarProps> = ({
     );
   }
 
-  // 몽이: 둥근 귀와 말린 꼬리의 원숭이, 지혜롭고 밝은 파스텔 톤
+  // 숭이: 둥근 귀와 말린 꼬리의 원숭이, 지혜롭고 밝은 파스텔 톤
   return (
     <div className={`relative flex items-center justify-center shrink-0 ${dimension} ${className}`}>
       {thinkingRing}

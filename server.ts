@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getHealth, processChat } from './server/chatService';
 import { getClientIp } from './server/rateLimit';
+import { listFeedback, saveFeedback } from './server/feedbackService';
 
 /**
  * 로컬 개발(`npm run dev`) 및 일반 Node 호스팅(`npm start`)용 Express 서버.
@@ -27,6 +28,16 @@ app.get('/api/health', async (_req, res) => {
 
 app.post('/api/chat', async (req, res) => {
   const { status, body } = await processChat(req.body, getClientIp(req.headers));
+  res.status(status).json(body);
+});
+
+app.post('/api/feedback', async (req, res) => {
+  const { status, body } = await saveFeedback(req.body, getClientIp(req.headers));
+  res.status(status).json(body);
+});
+
+app.get('/api/feedback', async (req, res) => {
+  const { status, body } = await listFeedback(req.headers.authorization);
   res.status(status).json(body);
 });
 

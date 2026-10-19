@@ -105,7 +105,7 @@ export const PWAInstallButton: React.FC = () => {
         className="px-2.5 py-1 rounded-full bg-white/70 hover:bg-white text-[11px] font-bold text-[#35586C] shadow-2xs border border-white/60 flex items-center gap-1 transition cursor-pointer"
       >
         <Download className="w-3.5 h-3.5 text-[#5BB7E6]" />
-        <span>앱 설치</span>
+        <span className="hidden min-[420px]:inline whitespace-nowrap">앱 설치</span>
       </button>
 
       {/* Comprehensive Install & Benefit Modal */}

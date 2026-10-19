@@ -47,7 +47,7 @@ test('complying with a fun-story request passes (응답 11~14)', () => {
 
 test('accepting a correction passes, repeating the interpretation fails', () => {
   const check = checks.acceptsCorrection();
-  assert.equal(run(check, '내가 잘못 이해했네, 웃고 싶었구나! 그럼 몽이 바나나 실수담 들려줄게.'), null);
+  assert.equal(run(check, '내가 잘못 이해했네, 웃고 싶었구나! 그럼 숭이 바나나 실수담 들려줄게.'), null);
   // 실제 배포 응답 (LOW): 정정을 받아들임
   assert.equal(run(check, '아, 위로보다 그냥 빵 터지고 싶었구나. 바나나를 껍질째 씹어 먹으려다 깜짝 놀란 원숭이 이야기라도 해줄까? 🍌'), null);
   assert.ok(run(check, '그래도 사실은 위로가 필요한 것 같아.'));
@@ -73,4 +73,15 @@ test('asking again after the student already asked is flagged (실제 LOW 응답
   assert.ok(run(check, '아, 웃고 싶었구나! 냥이가 엉뚱하고 재미난 이야기 하나 해 줄까? 🌙'));
   assert.ok(run(check, '아, 웃고 싶었구나! 그럼 멍이가 엉뚱한 실수했던 이야기 해 줄까?'));
   assert.equal(run(check, '좋아, 웃겨 줄게! 멍이가 어제 꼬리 잡으려다 빙글빙글 돌다가 소파에 콕 박혔어.'), null);
+});
+
+test('parroting and stock questions are flagged (개선사항 문서 사례)', () => {
+  const ctx = { usedStrategies: new Set(), userMessage: '숙제가 너무 많아서 힘들어' };
+  assert.ok(checks.noParrot()({ message: '숙제가 너무 많아서 힘들구나. 네가 가장 걱정되는 점은 뭐야?' }, ctx));
+  assert.ok(checks.noClicheQuestion()({ message: '그랬구나. 편안했던 순간은 언제야?' }));
+  assert.equal(
+    checks.noParrot()({ message: '끝이 안 보이는 기분이겠다. 마감이 제일 가까운 게 뭔지부터 같이 볼래?' }, ctx),
+    null
+  );
+  assert.equal(checks.noClicheQuestion()({ message: '마감이 제일 가까운 과목은 뭐야?' }), null);
 });

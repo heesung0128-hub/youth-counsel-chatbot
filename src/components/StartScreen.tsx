@@ -30,7 +30,8 @@ export const StartScreen: React.FC<StartScreenProps> = ({
     }
   }, [selectedCounselorId]);
 
-  const counselorList: CounselorId[] = ['cat', 'dog', 'monkey'];
+  // 선택 화면 순서: 멍이 → 냥이 → 숭이
+  const counselorList: CounselorId[] = ['dog', 'cat', 'monkey'];
 
   const handleCharacterClick = (id: CounselorId) => {
     setTentativeSelection(id);

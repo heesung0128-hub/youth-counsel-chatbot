@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { CounselorId, ChatMessage, AppLockSettings, RiskLevel } from './types';
 import { COUNSELOR_PROFILES, getLocalFallbackResponse } from './config/promptConfig';
 import { evaluateConversationRisk } from './utils/conversationRisk';
+import { shouldShowReferralCard } from './utils/referralDisplay';
+import { loadRatingState, postponeRating, shouldPromptRating, type RatingPromptState } from './utils/ratingPrompt';
+import { FeedbackModal } from './components/FeedbackModal';
 import {
   generateAnonymousId,
   generateTransferCode,
@@ -22,6 +25,7 @@ const STORAGE_KEYS = {
   CHAT_MESSAGES: 'seocho_chat_messages',
   LOCK_SETTINGS: 'seocho_lock_settings',
   LAST_ACTIVE: 'seocho_last_active_timestamp',
+  RATING_PROMPT: 'seocho_rating_prompt',
 };
 
 export default function App() {
@@ -55,6 +59,23 @@ export default function App() {
 
   // 5. Modals
   const [isHelpOpen, setIsHelpOpen] = useState<boolean>(false);
+  // 앱 평가 팝업(rating) / ★ 의견 창(feedback)
+  const [feedbackMode, setFeedbackMode] = useState<'rating' | 'feedback' | null>(null);
+  const [ratingState, setRatingState] = useState<RatingPromptState>(() => {
+    try {
+      return loadRatingState(localStorage.getItem(STORAGE_KEYS.RATING_PROMPT));
+    } catch {
+      return { status: 'none' };
+    }
+  });
+  const updateRatingState = (next: RatingPromptState) => {
+    setRatingState(next);
+    try {
+      localStorage.setItem(STORAGE_KEYS.RATING_PROMPT, JSON.stringify(next));
+    } catch {
+      // 저장 공간을 쓸 수 없으면 이번 사용 동안만 기억
+    }
+  };
   const [isPinSetupOpen, setIsPinSetupOpen] = useState<boolean>(false);
   const [isReferralOpen, setIsReferralOpen] = useState<boolean>(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(false);
@@ -121,6 +142,17 @@ export default function App() {
       }
     }
   }, []);
+
+  // 대화가 어느 정도 쌓이면 앱 평가 팝업 (규칙: utils/ratingPrompt.ts)
+  useEffect(() => {
+    // 채팅 화면에서만, 다른 창이 떠 있지 않을 때만
+    if (currentScreen !== 'chat' || isLoading || feedbackMode || isHelpOpen) return;
+    const counselorReplies = messages.filter((m) => m.sender === 'counselor');
+    const last = counselorReplies[counselorReplies.length - 1];
+    if (!shouldPromptRating(ratingState, counselorReplies.length, last?.riskLevel)) return;
+    const timer = setTimeout(() => setFeedbackMode('rating'), 1500);
+    return () => clearTimeout(timer);
+  }, [currentScreen, messages, isLoading, feedbackMode, isHelpOpen, ratingState]);
 
   // Save messages to localStorage whenever they change
   useEffect(() => {
@@ -275,9 +307,8 @@ export default function App() {
 
       // Check risk level returned by AI / safety fallback
       const finalRisk: RiskLevel = clientCheck.riskLevel === 'crisis' ? 'crisis' : data.riskLevel;
-      if (finalRisk === 'crisis') {
-        setActiveCrisisLevel('crisis');
-      }
+      // 위기 턴에만 상단 긴급 배너를 띄우고, 대화가 위기가 아닌 쪽으로 넘어가면 내림
+      setActiveCrisisLevel(finalRisk === 'crisis' ? 'crisis' : 'safe');
 
       // 4. Update suggested keywords
       if (data.suggestedKeywords && data.suggestedKeywords.length === 3) {
@@ -292,7 +323,12 @@ export default function App() {
         timestamp: Date.now(),
         riskLevel: finalRisk,
         suggestedKeywords: data.suggestedKeywords,
-        isReferralOffer: data.shouldOfferReferral,
+        // 같은 연계 카드가 매 턴 반복되지 않게 (최근 3개 답변에 같은 단계 카드가 있으면 생략)
+        isReferralOffer: shouldShowReferralCard(
+          messages,
+          data.shouldOfferReferral === true,
+          finalRisk === 'crisis' ? 3 : data.referralStage === 3 ? 3 : 2
+        ),
         referralStage: data.referralStage || (finalRisk === 'crisis' ? 3 : 2),
         isSafetyCheck: data.safetyCheck === true && finalRisk !== 'crisis',
       };
@@ -306,9 +342,8 @@ export default function App() {
       const fallback = getLocalFallbackResponse(counselor, text, risk.riskLevel, {
         safetyCheck: risk.needsSafetyCheck,
       });
-      if (fallback.riskLevel === 'crisis') {
-        setActiveCrisisLevel('crisis');
-      }
+      setActiveCrisisLevel(fallback.riskLevel === 'crisis' ? 'crisis' : 'safe');
+      const fallbackStage: 2 | 3 = 'referralStage' in fallback && fallback.referralStage === 3 ? 3 : 2;
 
       const fallbackMsg: ChatMessage = {
         id: `msg-${Date.now()}-counselor-fallback`,
@@ -317,8 +352,8 @@ export default function App() {
         timestamp: Date.now(),
         riskLevel: fallback.riskLevel,
         suggestedKeywords: fallback.suggestedKeywords,
-        isReferralOffer: fallback.shouldOfferReferral,
-        referralStage: 'referralStage' in fallback ? fallback.referralStage : undefined,
+        isReferralOffer: shouldShowReferralCard(messages, fallback.shouldOfferReferral, fallbackStage),
+        referralStage: fallbackStage,
         isSafetyCheck: 'safetyCheck' in fallback && fallback.safetyCheck === true,
       };
 
@@ -391,6 +426,8 @@ export default function App() {
             onLockApp={() => setIsAppLocked(true)}
             suggestedKeywords={suggestedKeywords}
             activeCrisisLevel={activeCrisisLevel}
+            onDismissCrisisBanner={() => setActiveCrisisLevel('safe')}
+            onOpenFeedback={() => setFeedbackMode('feedback')}
             onOpenReferralDetails={handleOpenReferralDetails}
           />
         )}
@@ -410,6 +447,25 @@ export default function App() {
             setIsPinSetupOpen(false);
             proceedToChat();
           }}
+        />
+
+        {/* 앱 평가 팝업 · ★ 의견 창 */}
+        <FeedbackModal
+          isOpen={feedbackMode !== null}
+          mode={feedbackMode ?? 'feedback'}
+          counselorId={selectedCounselorId || 'cat'}
+          onClose={() => {
+            // 평가 팝업을 그냥 닫으면 "나중에"와 같게 처리
+            if (feedbackMode === 'rating' && ratingState.status !== 'done') {
+              updateRatingState(postponeRating(ratingState, messages.filter((m) => m.sender === 'counselor').length));
+            }
+            setFeedbackMode(null);
+          }}
+          onLater={() => {
+            updateRatingState(postponeRating(ratingState, messages.filter((m) => m.sender === 'counselor').length));
+            setFeedbackMode(null);
+          }}
+          onSubmitted={() => updateRatingState({ status: 'done' })}
         />
 
         {/* Help Modal ("?" Button) */}

@@ -109,3 +109,9 @@ export function getClientIp(headers: Record<string, string | string[] | undefine
   if (forwarded) return forwarded.split(',')[0].trim();
   return pick(headers['x-real-ip'])?.trim() || 'unknown';
 }
+
+/** 다른 기능(피드백 저장 등)에서 같은 Upstash 연결을 쓰기 위함. 설정이 없으면 null */
+export function getRedis(): Redis | null {
+  getLimiters();
+  return redisClient;
+}

@@ -14,3 +14,24 @@ export function isPlaceholder(value: string | undefined | null): boolean {
 export function displayValue(value: string | undefined | null): string | null {
   return isPlaceholder(value) ? null : (value as string).trim();
 }
+
+interface ReferralHistoryItem {
+  sender: string;
+  isReferralOffer?: boolean;
+  referralStage?: 2 | 3;
+}
+
+/**
+ * 연계 카드를 이번 답변에 붙일지 결정.
+ * 같은 단계(또는 더 높은 단계)의 카드를 최근 캐릭터 답변 3개 안에서 이미 보여 줬다면 반복하지 않음.
+ * 단계가 올라가면(2단계 → 3단계 위기) 다시 보여 줌.
+ */
+export function shouldShowReferralCard(
+  previousMessages: ReferralHistoryItem[],
+  offer: boolean,
+  stage: 2 | 3
+): boolean {
+  if (!offer) return false;
+  const recentCounselor = previousMessages.filter((m) => m.sender === 'counselor').slice(-3);
+  return !recentCounselor.some((m) => m.isReferralOffer && (m.referralStage ?? 2) >= stage);
+}

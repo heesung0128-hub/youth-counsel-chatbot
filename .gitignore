@@ -8,3 +8,4 @@ coverage/
 !.env.example
 
 scripts/scenario-results/
+scripts/feedback-results/

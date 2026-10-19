@@ -18,8 +18,9 @@ for (const scenario of SCENARIOS) {
     console.log(`=== ${scenario.id} [${counselorId}] ===`);
     const ctx = { usedStrategies: new Set() };
     rows.forEach((r, i) => {
+      ctx.userMessage = r.userMessage;
       const turnChecks = scenario.turns[i]?.[1] ?? [];
-      const issues = [...turnChecks, checks.banmal()].map((c) => c(r, ctx)).filter(Boolean);
+      const issues = [...turnChecks, checks.banmal(), checks.noClicheQuestion(), checks.noParrot()].map((c) => c(r, ctx)).filter(Boolean);
       if (isAdvice(r.message)) strategiesIn(r.message).forEach((s) => ctx.usedStrategies.add(s));
       if (issues.length) flagged++;
       console.log(`  ${r.userMessage} → ${issues.length ? '⚠️ ' + issues.join(' / ') : '✅'}`);
