@@ -292,7 +292,7 @@ export function getLocalFallbackResponse(
   // 같은 문장이 반복되지 않도록 메시지에 따라 다른 답을 고름 (따라 하기 + 상투적인 질문 형식 피하기)
   const everyday = [
     `${profile.name}는 계속 듣고 있어. 조금만 더 자세히 말해 줄래? 무슨 일이 있었는지부터 편하게.`,
-    `그런 일이 있었구나. 지금 ${profile.name}가 AI 연결이 잠깐 느려서 짧게만 답할 수 있어. 그래도 네 이야기는 다 듣고 있으니 이어서 말해 줘.`,
+    `그런 일이 있었구나. ${profile.name}가 잘 듣고 있으니까, 그 일에 대해 조금만 더 이야기해 줄래?`,
     `말해 줘서 고마워. 그때 상황이 어땠는지 조금 더 들려주면, ${profile.name}가 같이 정리해 볼게.`,
   ];
   const pick = Array.from(userMessage).reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % everyday.length;

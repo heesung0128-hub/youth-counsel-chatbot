@@ -15,6 +15,7 @@ import { checkRateLimit, getRateLimitStatus } from './rateLimit';
 import { avoidConsecutiveEmoji, chooseCrisisSafeMessage, resolveSafetyCheck } from './responsePolicy';
 import { classifyAiError, getReasoningEffort, getTimeoutMs, withOverloadRetry } from './aiConfig';
 import { generateReply, getProviderInfo, type ChatTurn } from './aiProvider';
+import { blockedOutputCategories, inputSignal, isModerationEnabled, moderate } from './moderation';
 
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_HISTORY_TURNS = 8;
@@ -41,6 +42,7 @@ export async function getHealth(): Promise<ServiceResult> {
       hasApiKey: getProviderInfo().configured,
       model: getProviderInfo().model,
       reasoningEffort: getReasoningEffort(),
+      moderation: isModerationEnabled() ? 'on' : 'off',
       rateLimit: await getRateLimitStatus(),
       timestamp: new Date().toISOString(),
     },
@@ -101,6 +103,9 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
 
     const dynamicSystemPrompt = buildSystemPrompt(validCounselorId);
 
+    // 콘텐츠 필터: 학생 입력 검사는 AI 호출과 동시에 진행 (기다리는 시간 거의 없음)
+    const inputModeration = moderate(maskPersonalInfo(cleanMessage));
+
     // 서버 과부하(5xx) 때는 한 번 재시도 (같은 제한 시간 안에서)
     const responseText = await withOverloadRetry(
       (signal) =>
@@ -128,9 +133,13 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
 
     // 모델이 더 낮게 판단해도 규칙 기반 판정(현재 메시지·최근 대화 흐름)보다 낮아지지 않게 함
     // 예: 확인 질문 뒤 간접 신호가 다시 나오면 모델이 또 질문하더라도 위기로 안내
+    // 콘텐츠 필터의 자해 신호도 반영 (자해 의도·방법 → 위기, 자해 → 우려 + 안전 확인 질문)
+    const moderationSignal = inputSignal(await inputModeration);
+    const moderationRisk: RiskLevel =
+      moderationSignal === 'crisis' ? 'crisis' : moderationSignal ? 'concern' : 'safe';
     const finalRiskLevel = maxRisk(
-      maxRisk(parsedData.riskLevel, heuristicCheck.riskLevel),
-      conversationRisk.riskLevel
+      maxRisk(maxRisk(parsedData.riskLevel, heuristicCheck.riskLevel), conversationRisk.riskLevel),
+      moderationRisk
     );
 
     // 위기 키워드가 있으면 확인 질문 없이 즉시 안내, 간접 신호면 확인 질문 턴으로 처리
@@ -138,7 +147,8 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
     const { safetyCheck, shouldOfferReferral } = resolveSafetyCheck({
       finalRiskLevel,
       heuristicRiskLevel: heuristicCheck.riskLevel,
-      modelSafetyCheck: parsedData.safetyCheck === true || conversationRisk.needsSafetyCheck,
+      modelSafetyCheck:
+        parsedData.safetyCheck === true || conversationRisk.needsSafetyCheck || moderationSignal === 'safety_check',
       modelOfferReferral: parsedData.shouldOfferReferral,
     });
 
@@ -151,17 +161,31 @@ export async function processChat(rawBody: unknown, clientIp = 'unknown'): Promi
       crisisMessage: crisisFallback.message,
     });
 
+    // 콘텐츠 필터: AI 답변에 학생에게 부적절한 내용이 있으면 안전한 내장 응답으로 교체
+    // (규칙으로 고른 위기 안내 문장은 검사할 필요 없음)
+    const blocked = overridden ? [] : blockedOutputCategories(await moderate(message));
+    let finalMessage = message;
+    let finalKeywords = overridden ? crisisFallback.suggestedKeywords : keywords;
+    let source = overridden ? `${provider.name}_rule_crisis` : provider.name;
+    if (blocked.length > 0) {
+      console.warn(`[moderation_blocked] categories=${blocked.join(',')}`);
+      const safe = getLocalFallbackResponse(validCounselorId, cleanMessage, finalRiskLevel, { safetyCheck });
+      finalMessage = safe.message;
+      finalKeywords = safe.suggestedKeywords;
+      source = `${provider.name}_filtered`;
+    }
+
     return {
       status: 200,
       body: {
-        message,
-        suggestedKeywords: overridden ? crisisFallback.suggestedKeywords : keywords,
+        message: finalMessage,
+        suggestedKeywords: finalKeywords,
         riskLevel: finalRiskLevel,
         counselorNote: parsedData.counselorNote || '',
         shouldOfferReferral,
         safetyCheck,
         referralStage: finalRiskLevel === 'crisis' ? 3 : parsedData.referralStage || 2,
-        source: overridden ? `${provider.name}_rule_crisis` : provider.name,
+        source,
       },
     };
   } catch (error) {

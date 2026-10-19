@@ -2342,7 +2342,7 @@ function getLocalFallbackResponse(counselorId, userMessage, riskLevel, options =
   }
   const everyday = [
     `${profile.name}\uB294 \uACC4\uC18D \uB4E3\uACE0 \uC788\uC5B4. \uC870\uAE08\uB9CC \uB354 \uC790\uC138\uD788 \uB9D0\uD574 \uC904\uB798? \uBB34\uC2A8 \uC77C\uC774 \uC788\uC5C8\uB294\uC9C0\uBD80\uD130 \uD3B8\uD558\uAC8C.`,
-    `\uADF8\uB7F0 \uC77C\uC774 \uC788\uC5C8\uAD6C\uB098. \uC9C0\uAE08 ${profile.name}\uAC00 AI \uC5F0\uACB0\uC774 \uC7A0\uAE50 \uB290\uB824\uC11C \uC9E7\uAC8C\uB9CC \uB2F5\uD560 \uC218 \uC788\uC5B4. \uADF8\uB798\uB3C4 \uB124 \uC774\uC57C\uAE30\uB294 \uB2E4 \uB4E3\uACE0 \uC788\uC73C\uB2C8 \uC774\uC5B4\uC11C \uB9D0\uD574 \uC918.`,
+    `\uADF8\uB7F0 \uC77C\uC774 \uC788\uC5C8\uAD6C\uB098. ${profile.name}\uAC00 \uC798 \uB4E3\uACE0 \uC788\uC73C\uB2C8\uAE4C, \uADF8 \uC77C\uC5D0 \uB300\uD574 \uC870\uAE08\uB9CC \uB354 \uC774\uC57C\uAE30\uD574 \uC904\uB798?`,
     `\uB9D0\uD574 \uC918\uC11C \uACE0\uB9C8\uC6CC. \uADF8\uB54C \uC0C1\uD669\uC774 \uC5B4\uB560\uB294\uC9C0 \uC870\uAE08 \uB354 \uB4E4\uB824\uC8FC\uBA74, ${profile.name}\uAC00 \uAC19\uC774 \uC815\uB9AC\uD574 \uBCFC\uAC8C.`
   ];
   const pick = Array.from(userMessage).reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % everyday.length;
@@ -8509,6 +8509,62 @@ async function generateReply(input) {
   return parseOpenAIResponse(await res.json());
 }
 
+// server/moderation.ts
+function isModerationEnabled() {
+  return (process.env.MODERATION_ENABLED || "").trim().toLowerCase() !== "false" && !!process.env.OPENAI_API_KEY?.trim();
+}
+function inputSignal(result) {
+  if (!result) return null;
+  const c = result.categories;
+  if (c["self-harm/intent"] || c["self-harm/instructions"]) return "crisis";
+  if (c["self-harm"]) return "safety_check";
+  if (c["sexual/minors"]) return "concern";
+  return null;
+}
+var BLOCKED_OUTPUT_CATEGORIES = [
+  "sexual",
+  "sexual/minors",
+  "harassment/threatening",
+  "hate",
+  "hate/threatening",
+  "illicit",
+  "illicit/violent",
+  "self-harm/instructions",
+  "violence/graphic"
+];
+function blockedOutputCategories(result) {
+  if (!result) return [];
+  return BLOCKED_OUTPUT_CATEGORIES.filter((k) => result.categories[k]);
+}
+async function moderate(text, timeoutMs = 5e3) {
+  if (!isModerationEnabled() || !text.trim()) return null;
+  try {
+    const res = await fetch(`${getOpenAIBaseUrl()}/moderations`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY?.trim() ?? ""}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: (process.env.OPENAI_MODERATION_MODEL || "").trim() || "omni-moderation-latest",
+        input: text
+      }),
+      signal: AbortSignal.timeout(timeoutMs)
+    });
+    if (!res.ok) {
+      console.error(`[moderation_error] status=${res.status}`);
+      return null;
+    }
+    const data = await res.json();
+    const r = data?.results?.[0];
+    if (!r) return null;
+    return { flagged: !!r.flagged, categories: r.categories ?? {} };
+  } catch (error) {
+    console.error("[moderation_error]", error instanceof Error ? error.message : error);
+    return null;
+  }
+}
+
 // server/chatService.ts
 var MAX_MESSAGE_LENGTH = 1e3;
 var MAX_HISTORY_TURNS = 8;
@@ -8549,6 +8605,7 @@ async function processChat(rawBody, clientIp = "unknown") {
       text: maskPersonalInfo(String(m?.text || "").slice(0, MAX_MESSAGE_LENGTH))
     })) : [];
     const dynamicSystemPrompt = buildSystemPrompt(validCounselorId);
+    const inputModeration = moderate(maskPersonalInfo(cleanMessage));
     const responseText = await withOverloadRetry(
       (signal) => generateReply({
         system: dynamicSystemPrompt,
@@ -8568,14 +8625,16 @@ async function processChat(rawBody, clientIp = "unknown") {
         parsedData.suggestedKeywords[2] || "\uB098 \uC694\uC998 \uD798\uB4E4\uC5B4"
       ];
     }
+    const moderationSignal = inputSignal(await inputModeration);
+    const moderationRisk = moderationSignal === "crisis" ? "crisis" : moderationSignal ? "concern" : "safe";
     const finalRiskLevel = maxRisk(
-      maxRisk(parsedData.riskLevel, heuristicCheck.riskLevel),
-      conversationRisk.riskLevel
+      maxRisk(maxRisk(parsedData.riskLevel, heuristicCheck.riskLevel), conversationRisk.riskLevel),
+      moderationRisk
     );
     const { safetyCheck, shouldOfferReferral } = resolveSafetyCheck({
       finalRiskLevel,
       heuristicRiskLevel: heuristicCheck.riskLevel,
-      modelSafetyCheck: parsedData.safetyCheck === true || conversationRisk.needsSafetyCheck,
+      modelSafetyCheck: parsedData.safetyCheck === true || conversationRisk.needsSafetyCheck || moderationSignal === "safety_check",
       modelOfferReferral: parsedData.shouldOfferReferral
     });
     const crisisFallback = getLocalFallbackResponse(validCounselorId, cleanMessage, "crisis");
@@ -8585,17 +8644,28 @@ async function processChat(rawBody, clientIp = "unknown") {
       modelMessage: avoidConsecutiveEmoji(String(parsedData.message || ""), conversationHistory),
       crisisMessage: crisisFallback.message
     });
+    const blocked = overridden ? [] : blockedOutputCategories(await moderate(message));
+    let finalMessage = message;
+    let finalKeywords = overridden ? crisisFallback.suggestedKeywords : keywords;
+    let source = overridden ? `${provider.name}_rule_crisis` : provider.name;
+    if (blocked.length > 0) {
+      console.warn(`[moderation_blocked] categories=${blocked.join(",")}`);
+      const safe = getLocalFallbackResponse(validCounselorId, cleanMessage, finalRiskLevel, { safetyCheck });
+      finalMessage = safe.message;
+      finalKeywords = safe.suggestedKeywords;
+      source = `${provider.name}_filtered`;
+    }
     return {
       status: 200,
       body: {
-        message,
-        suggestedKeywords: overridden ? crisisFallback.suggestedKeywords : keywords,
+        message: finalMessage,
+        suggestedKeywords: finalKeywords,
         riskLevel: finalRiskLevel,
         counselorNote: parsedData.counselorNote || "",
         shouldOfferReferral,
         safetyCheck,
         referralStage: finalRiskLevel === "crisis" ? 3 : parsedData.referralStage || 2,
-        source: overridden ? `${provider.name}_rule_crisis` : provider.name
+        source
       }
     };
   } catch (error) {

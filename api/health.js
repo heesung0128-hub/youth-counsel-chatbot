@@ -7951,6 +7951,11 @@ function getProviderInfo() {
   return { name: "openai", model: getOpenAIModel(), configured: !!process.env.OPENAI_API_KEY?.trim() };
 }
 
+// server/moderation.ts
+function isModerationEnabled() {
+  return (process.env.MODERATION_ENABLED || "").trim().toLowerCase() !== "false" && !!process.env.OPENAI_API_KEY?.trim();
+}
+
 // server/chatService.ts
 async function getHealth() {
   return {
@@ -7961,6 +7966,7 @@ async function getHealth() {
       hasApiKey: getProviderInfo().configured,
       model: getProviderInfo().model,
       reasoningEffort: getReasoningEffort(),
+      moderation: isModerationEnabled() ? "on" : "off",
       rateLimit: await getRateLimitStatus(),
       timestamp: (/* @__PURE__ */ new Date()).toISOString()
     }
