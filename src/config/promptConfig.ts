@@ -211,7 +211,6 @@ export const COUNSELOR_SYSTEM_INSTRUCTION = `
 - 'safe': 일반적인 학업 스트레스, 친구와의 작은 갈등, 일상 고민, 주제 이탈 질문 등.
 
 [응답 형식]
-- 정해진 JSON 형식으로만 답한다. message에는 학생에게 보낼 답변 문장만 쓴다.
 - suggestedKeywords는 학생이 바로 누를 수 있는 3개의 자연스럽고 짧은 반말 문장(10자 이내)이어야 한다.
 `;
 
