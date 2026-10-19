@@ -75,3 +75,10 @@ test('prompt tells the model to tell the story right away instead of offering it
   assert.ok(!prompt.includes('웃긴 얘기 해 줄까, 아니면 그냥 들어 줄까?'));
   assert.ok(!prompt.includes('(예: "내가 잘못 이해했네, 웃고 싶었구나!")'));
 });
+
+test('prompt has no concrete example stories that models tend to copy', () => {
+  for (const id of IDS) {
+    const prompt = buildSystemPrompt(id);
+    for (const phrase of ['거울 속', '고무장갑']) assert.ok(!prompt.includes(phrase), `${id}: ${phrase}`);
+  }
+});
